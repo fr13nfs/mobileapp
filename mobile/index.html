@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TMA Games</title>
-    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+<!--     <script src="https://sad.adsgram.ai/js/sad.min.js"></script> -->
     <link rel="stylesheet" href="styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <script>
-      const AdController = window.Adsgram.init({ blockId: "int-14600" debug=true});
+      // const AdController = window.Adsgram.init({ blockId: "int-14600" debug=true});
       (function () {
         const DEBUG = false; // set true to see console logs during testing
         const log = (...args) => {
@@ -24,17 +24,17 @@
           } else cb();
         }
 
-        function showAd() {
-          AdController.show().then((result) => {
-              // ✅ Ad watched fully
-              // alert("You earned 50 coins!");
-              // Here you can update user balance
-            })
-            .catch((err) => {
-              // ❌ Ad failed or closed early
-              console.error("Ad error:", err);
-            });
-        }
+        // function showAd() {
+        //   AdController.show().then((result) => {
+        //       // ✅ Ad watched fully
+        //       // alert("You earned 50 coins!");
+        //       // Here you can update user balance
+        //     })
+        //     .catch((err) => {
+        //       // ❌ Ad failed or closed early
+        //       console.error("Ad error:", err);
+        //     });
+        // }
 
         function normalize(s) {
           return (s || "").toString().trim().toLowerCase();
