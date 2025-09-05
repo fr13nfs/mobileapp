@@ -4,19 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TMA Games</title>
-    <script
+<!--     <script
       src="//libtl.com/sdk.js"
       data-zone="9829119"
       data-sdk="show_9829119"
-    ></script>
-<!--     <script src="https://sad.adsgram.ai/js/sad.min.js"></script> -->
+    ></script> -->
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <script>
-      // const AdController = window.Adsgram.init({ blockId: "int-14600" });
+      const AdController = window.Adsgram.init({ blockId: "int-14608" });
       (function () {
         const DEBUG = false; // set true to see console logs during testing
         const log = (...args) => {
@@ -83,14 +83,14 @@
         function normalize(s) {
           return (s || "").toString().trim().toLowerCase();
         }
+        
         function showAd() {
-          AdController.show()
-            .then((result) => {
+          AdController.show().then((result) => {
               // ✅ Ad watched fully
-              alert("You earned 50 coins!");
+              // alert("You earned 50 coins!");
               // Here you can update user balance
             })
-            .catch((err) => {
+            .catch((result) => {
               // ❌ Ad failed or closed early
               console.error("Ad error:", err);
             });
@@ -332,9 +332,9 @@
           </button>
           <div class="coins"><span>🪙</span>0</div>
         </div>
+        <button onclick="showAd()">🎥 Watch Ad 1</button>
+        <button onclick="showAd()">🎥 Watch Ad for Coins</button>
         <div class="row search-row">
-          <button onclick="showMonetagInter()">🎥 Watch Ad for Coins</button>
-          <button onclick="showAd()">🎥 Watch Ad for Coins</button>
           <div class="search-wrap">
             <input id="search-input" placeholder="Search games..." />
           </div>
