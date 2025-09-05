@@ -4,15 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TMA Games</title>
-<!--     <script src="https://sad.adsgram.ai/js/sad.min.js"></script> -->
-    <script async src="https://partner.adextra.io/jt/8fbc9e29c7dbba26d6ea53a7f043ed110ed79c22.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <script>
-      // const AdController = window.Adsgram.init({ blockId: "int-14600" debug=true});
       (function () {
         const DEBUG = false; // set true to see console logs during testing
         const log = (...args) => {
@@ -24,18 +21,6 @@
             document.addEventListener("DOMContentLoaded", cb);
           } else cb();
         }
-
-        // function showAd() {
-        //   AdController.show().then((result) => {
-        //       // ✅ Ad watched fully
-        //       // alert("You earned 50 coins!");
-        //       // Here you can update user balance
-        //     })
-        //     .catch((err) => {
-        //       // ❌ Ad failed or closed early
-        //       console.error("Ad error:", err);
-        //     });
-        // }
 
         function normalize(s) {
           return (s || "").toString().trim().toLowerCase();
@@ -83,7 +68,7 @@
           if (enterBtn) {
             enterBtn.addEventListener("click", () => {
               splash?.classList.add("hide");
-              showView(homeView);
+              homeView?.classList.remove("hidden");
               window.scrollTo({ top: 0, behavior: "instant" });
             });
           }
@@ -107,8 +92,8 @@
 
             // If All -> show home and hide group-view
             if (groupNorm === "all") {
-              hideView(groupView);
-              showView(homeView);
+              groupView?.classList.add("hidden");
+              homeView?.classList.remove("hidden");
               // optional: reset scroll
               window.scrollTo({ top: 0, behavior: "smooth" });
               return;
@@ -124,8 +109,8 @@
 
             if (!grid) {
               list.innerHTML = `<div class="empty">No games available</div>`;
-              hideView(homeView);
-              showView(groupView);
+              homeView?.classList.add("hidden");
+              groupView?.classList.remove("hidden");
               return;
             }
 
@@ -181,8 +166,8 @@
             }
 
             // Switch views
-            hideView(homeView);
-            showView(groupView);
+            homeView?.classList.add("hidden");
+            groupView?.classList.remove("hidden");
             window.scrollTo({ top: 0, behavior: "smooth" });
           });
 
@@ -199,28 +184,236 @@
             });
           }
 
-          
-// Clear search button
-const clearBtn = document.getElementById("clear-search");
-if (clearBtn && searchInput) {
-  clearBtn.addEventListener("click", () => {
-    searchInput.value = "";
-    searchInput.dispatchEvent(new Event("input"));
-  });
-}
+          // Carousel auto-slide & indicators
+          const carousel = document.querySelector(".carousel");
+          const indicators = document.querySelector(".carousel-indicators");
+          if (carousel && indicators) {
+            const slides = carousel.querySelectorAll(".feature-card");
+            slides.forEach((s, i) => {
+              const dot = document.createElement("span");
+              dot.className = "dot" + (i === 0 ? " active" : "");
+              dot.addEventListener("click", () => {
+                carousel.scrollTo({ left: s.offsetLeft, behavior: "smooth" });
+              });
+              indicators.appendChild(dot);
+            });
+            let idx = 0;
+            setInterval(() => {
+              idx = (idx + 1) % slides.length;
+              indicators
+                .querySelectorAll(".dot")
+                .forEach((d, i) => d.classList.toggle("active", i === idx));
+              carousel.scrollTo({
+                left: slides[idx].offsetLeft,
+                behavior: "smooth",
+              });
+            }, 5000);
+          }
 
-// Helper for view switching animations
-function showView(el) {
-  if (!el) return;
-  el.classList.remove("hidden");
-  setTimeout(() => el.classList.add("active"), 10);
-}
+          // Sort dropdown
+          const sortSelect = document.getElementById("sort-select");
+          if (sortSelect && grid) {
+            sortSelect.addEventListener("change", () => {
+              let cards = Array.from(grid.querySelectorAll(".game-card"));
+              if (sortSelect.value === "az") {
+                cards.sort((a, b) =>
+                  (a.dataset.title || "").localeCompare(b.dataset.title || "")
+                );
+              } else if (sortSelect.value === "newest") {
+                cards = cards.reverse(); // simplistic newest = last ones
+              }
+              grid.innerHTML = "";
+              cards.forEach((c) => grid.appendChild(c));
+            });
+          }
 
-function hideView(el) {
-  if (!el) return;
-  el.classList.remove("active");
-  setTimeout(() => el.classList.add("hidden"), 400);
-}
+          // ===== Enhanced Initialization (Sanitize titles, add metadata, fix sorting, carousel updates) =====
+          (function enhance() {
+            try {
+              // Sanitize titles and subtitles, assign order & played metadata
+              const allCards = Array.from(
+                document.querySelectorAll(
+                  ".game-card, .trending-card, .feature-card"
+                )
+              );
+              allCards.forEach((card, idx) => {
+                // ensure dataset.order
+                if (!card.dataset.order) card.dataset.order = String(idx);
+                if (!card.dataset.played)
+                  card.dataset.played = card.dataset.played || "0";
+                // sanitize title text
+                const titleEl = card.querySelector(".title");
+                if (titleEl) {
+                  let t = titleEl.textContent.trim();
+                  // If the title is duplicated (e.g., "foo foo" or "foo foo foo"), reduce repetition
+                  const parts = t.split(/\s+/);
+                  if (parts.length >= 2) {
+                    // try detect exact double like "name name"
+                    const half = Math.floor(parts.length / 2);
+                    const left = parts.slice(0, half).join(" ");
+                    const right = parts.slice(half).join(" ");
+                    if (
+                      left &&
+                      right &&
+                      left.toLowerCase() === right.toLowerCase()
+                    ) {
+                      t = left;
+                    } else {
+                      // if the first and second token equal, drop duplicates at word-level
+                      if (parts[0].toLowerCase() === parts[1].toLowerCase()) {
+                        // remove repeated leading run
+                        let i = 1;
+                        while (
+                          i < parts.length &&
+                          parts[i].toLowerCase() === parts[0].toLowerCase()
+                        )
+                          i++;
+                        t = parts.slice(i).join(" ") || parts[0];
+                      }
+                    }
+                  }
+                  // normalize excessive dashes/underscores
+                  t = t.replace(/[_\-]+/g, " ").trim();
+                  titleEl.textContent = t;
+                  // update data-title used by search/sort
+                  try {
+                    card.dataset.title = t.toLowerCase();
+                  } catch (e) {}
+                }
+                // ensure correct subtitle (category) if it currently mirrors title
+                const subtitleEl = card.querySelector(".subtitle");
+                const group =
+                  card.getAttribute("data-group") || card.dataset.group || "";
+                if (subtitleEl) {
+                  const st = subtitleEl.textContent.trim();
+                  if (
+                    !st ||
+                    (card.dataset.title &&
+                      st
+                        .toLowerCase()
+                        .includes(card.dataset.title.toLowerCase()))
+                  ) {
+                    // use group as subtitle if available
+                    subtitleEl.textContent = group || st;
+                  }
+                }
+              });
+            } catch (err) {
+              console.warn("Enhance setup failed", err);
+            }
+
+            // === Sorting functionality (reliable) ===
+            const gameGrid = document.getElementById("game-grid");
+            const sortSelect = document.getElementById("sort-select");
+            if (gameGrid && sortSelect) {
+              sortSelect.addEventListener("change", (ev) => {
+                const v = sortSelect.value;
+                const cards = Array.from(
+                  gameGrid.querySelectorAll(".game-card")
+                );
+                if (v === "az") {
+                  cards.sort((a, b) =>
+                    (a.dataset.title || "").localeCompare(b.dataset.title || "")
+                  );
+                } else if (v === "newest") {
+                  cards.sort(
+                    (a, b) =>
+                      Number(b.dataset.order || 0) -
+                      Number(a.dataset.order || 0)
+                  );
+                } else if (v === "played") {
+                  cards.sort(
+                    (a, b) =>
+                      Number(b.dataset.played || 0) -
+                      Number(a.dataset.played || 0)
+                  );
+                }
+                // re-attach
+                cards.forEach((c) => gameGrid.appendChild(c));
+              });
+            }
+
+            // === Carousel indicators: keep dots synced with scroll & clicking ===
+            const carousel = document.querySelector(".carousel");
+            const indicators = document.querySelector(".carousel-indicators");
+            if (carousel && indicators) {
+              const slides = Array.from(
+                carousel.querySelectorAll(".feature-card")
+              );
+              if (slides.length) {
+                indicators.innerHTML = "";
+                slides.forEach((s, i) => {
+                  const dot = document.createElement("button");
+                  dot.type = "button";
+                  dot.className = "dot" + (i === 0 ? " active" : "");
+                  dot.setAttribute("aria-label", "Go to slide " + (i + 1));
+                  dot.addEventListener("click", () => {
+                    carousel.scrollTo({
+                      left: s.offsetLeft,
+                      behavior: "smooth",
+                    });
+                  });
+                  indicators.appendChild(dot);
+                });
+                // sync on scroll
+                let idx = 0;
+                const updateActiveDot = () => {
+                  const scrollLeft = carousel.scrollLeft;
+                  let closest = 0,
+                    minDiff = Infinity;
+                  slides.forEach((s, i) => {
+                    const diff = Math.abs(s.offsetLeft - scrollLeft);
+                    if (diff < minDiff) {
+                      minDiff = diff;
+                      closest = i;
+                    }
+                  });
+                  idx = closest;
+                  Array.from(indicators.children).forEach((d, i) =>
+                    d.classList.toggle("active", i === idx)
+                  );
+                };
+                carousel.addEventListener("scroll", () => {
+                  requestAnimationFrame(updateActiveDot);
+                });
+                // basic auto-slide (resets if user interacts)
+                let auto = setInterval(() => {
+                  idx = (idx + 1) % slides.length;
+                  carousel.scrollTo({
+                    left: slides[idx].offsetLeft,
+                    behavior: "smooth",
+                  });
+                }, 5000);
+                ["touchstart", "pointerdown", "mousedown"].forEach((ev) => {
+                  carousel.addEventListener(ev, () => {
+                    clearInterval(auto);
+                  });
+                });
+                // update initially
+                setTimeout(updateActiveDot, 300);
+              }
+            }
+
+            // === Search clear button visibility ===
+            const sInput = document.getElementById("search-input");
+            const clearBtn = document.getElementById("clear-search");
+            if (sInput && clearBtn) {
+              const toggleClear = () => {
+                clearBtn.style.display = sInput.value ? "inline-flex" : "none";
+              };
+              sInput.addEventListener("input", () => {
+                toggleClear();
+              });
+              toggleClear();
+              clearBtn.addEventListener("click", () => {
+                sInput.value = "";
+                sInput.dispatchEvent(new Event("input"));
+                toggleClear();
+                sInput.focus();
+              });
+            }
+          })();
+          // ===== End enhanced init =====
 
           // Optional: small sanity checks (only when DEBUG)
           if (DEBUG) {
@@ -246,7 +439,7 @@ function hideView(el) {
       </div>
     </section>
 
-    <main id="home-view" class="home view hidden">
+    <main id="home-view" class="home hidden">
       <header class="topbar">
         <div class="row user-coins">
           <button class="icon-btn avatar">
@@ -260,7 +453,6 @@ function hideView(el) {
         <div class="row search-row">
           <div class="search-wrap">
             <input id="search-input" placeholder="Search games..." />
-  <button id="clear-search" class="icon-btn">×</button>
           </div>
         </div>
         <div class="row groups-row">
@@ -275,15 +467,14 @@ function hideView(el) {
           </div>
         </div>
       </header>
-      <div id="8fbc9e29c7dbba26d6ea53a7f043ed110ed79c22"></div>
+
       <section class="content-area">
         <h2>Featured</h2>
         <div class="carousel">
           <a
             class="feature-card"
             href="2048/index.html"
-            data-title="2048
-2048"
+            data-title="2048"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -295,16 +486,16 @@ function hideView(el) {
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="title">2048</div>
+              <div class="title">2048 2048</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
           <a
             class="feature-card"
             href="3dtetris/index.html"
-            data-title="3dtetris
-3dtetris"
+            data-title="3dtetris"
             data-group="Puzzle"
           >
             <div class="img-wrap">
@@ -316,16 +507,16 @@ function hideView(el) {
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="title">3D Tetris</div>
+              <div class="title">3dtetris 3dtetris</div>
               <div class="subtitle">Puzzle</div>
             </div>
           </a>
           <a
             class="feature-card"
             href="alienattack/index.html"
-            data-title="alienattack
-alienattack"
+            data-title="alienattack"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -337,19 +528,20 @@ alienattack cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="title">Alien Attack</div>
+              <div class="title">alienattack alienattack</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
         </div>
+        <div class="carousel-indicators"></div>
         <h2>Trending</h2>
         <div class="trending-strip">
           <a
             class="trending-card"
             href="balanceball/index.html"
-            data-title="balanceball
-balanceball"
+            data-title="balanceball"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -361,6 +553,7 @@ balanceball cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">balanceball balanceball</div>
               <div class="subtitle">Extras</div>
@@ -369,8 +562,7 @@ balanceball cover"
           <a
             class="trending-card"
             href="battleday/index.html"
-            data-title="battleday
-battleday"
+            data-title="battleday"
             data-group="Action"
           >
             <div class="img-wrap">
@@ -382,6 +574,7 @@ battleday cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">battleday battleday</div>
               <div class="subtitle">Action</div>
@@ -390,8 +583,7 @@ battleday cover"
           <a
             class="trending-card"
             href="bdot/index.html"
-            data-title="bdot
-bdot"
+            data-title="bdot"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -403,6 +595,7 @@ bdot cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bdot bdot</div>
               <div class="subtitle">Extras</div>
@@ -411,8 +604,7 @@ bdot cover"
           <a
             class="trending-card"
             href="birgly/index.html"
-            data-title="birgly
-birgly"
+            data-title="birgly"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -424,6 +616,7 @@ birgly cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">birgly birgly</div>
               <div class="subtitle">Extras</div>
@@ -432,8 +625,7 @@ birgly cover"
           <a
             class="trending-card"
             href="blackbats/index.html"
-            data-title="blackbats
-blackbats"
+            data-title="blackbats"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -445,6 +637,7 @@ blackbats cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">blackbats blackbats</div>
               <div class="subtitle">Extras</div>
@@ -453,8 +646,7 @@ blackbats cover"
           <a
             class="trending-card"
             href="bloxslider/index.html"
-            data-title="bloxslider
-bloxslider"
+            data-title="bloxslider"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -466,6 +658,7 @@ bloxslider cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bloxslider bloxslider</div>
               <div class="subtitle">Extras</div>
@@ -474,8 +667,7 @@ bloxslider cover"
           <a
             class="trending-card"
             href="bottomtight/index.html"
-            data-title="bottomtight
-bottomtight"
+            data-title="bottomtight"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -487,6 +679,7 @@ bottomtight cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bottomtight bottomtight</div>
               <div class="subtitle">Extras</div>
@@ -495,8 +688,7 @@ bottomtight cover"
           <a
             class="trending-card"
             href="bravebird/index.html"
-            data-title="bravebird
-bravebird"
+            data-title="bravebird"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -508,6 +700,7 @@ bravebird cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bravebird bravebird</div>
               <div class="subtitle">Extras</div>
@@ -516,8 +709,7 @@ bravebird cover"
           <a
             class="trending-card"
             href="brokenhorn/index.html"
-            data-title="brokenhorn
-brokenhorn"
+            data-title="brokenhorn"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -529,6 +721,7 @@ brokenhorn cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">brokenhorn brokenhorn</div>
               <div class="subtitle">Extras</div>
@@ -537,8 +730,7 @@ brokenhorn cover"
           <a
             class="trending-card"
             href="bubblecn/index.html"
-            data-title="bubblecn
-bubblecn"
+            data-title="bubblecn"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -550,6 +742,7 @@ bubblecn cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bubblecn bubblecn</div>
               <div class="subtitle">Extras</div>
@@ -558,8 +751,7 @@ bubblecn cover"
           <a
             class="trending-card"
             href="bubblefish/index.html"
-            data-title="bubblefish
-bubblefish"
+            data-title="bubblefish"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -571,6 +763,7 @@ bubblefish cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bubblefish bubblefish</div>
               <div class="subtitle">Extras</div>
@@ -579,8 +772,7 @@ bubblefish cover"
           <a
             class="trending-card"
             href="burningrubber/index.html"
-            data-title="burningrubber
-burningrubber"
+            data-title="burningrubber"
             data-group="Extras"
           >
             <div class="img-wrap">
@@ -592,6 +784,7 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">burningrubber burningrubber</div>
               <div class="subtitle">Extras</div>
@@ -599,13 +792,22 @@ burningrubber cover"
           </a>
         </div>
         <h2>All Games</h2>
+        <div class="sort-wrap">
+          <label>Sort:</label>
+          <select id="sort-select">
+            <option value="newest">Newest</option>
+            <option value="az">A–Z</option>
+            <option value="played">Most Played</option>
+          </select>
+        </div>
         <div id="game-grid" class="grid">
           <a
             class="game-card"
             href="2048/index.html"
-            data-title="2048
-2048"
+            data-title="2048"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -616,17 +818,19 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="title">2048</div>
+              <div class="title">2048 2048</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
           <a
             class="game-card"
             href="3dtetris/index.html"
-            data-title="3dtetris
-3dtetris"
+            data-title="3dtetris"
             data-group="Puzzle"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -637,17 +841,19 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="title">3D Tetris</div>
+              <div class="title">3dtetris 3dtetris</div>
               <div class="subtitle">Puzzle</div>
             </div>
           </a>
           <a
             class="game-card"
             href="alienattack/index.html"
-            data-title="alienattack
-alienattack"
+            data-title="alienattack"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -658,17 +864,19 @@ alienattack cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="title">Alien Attack</div>
+              <div class="title">alienattack alienattack</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
           <a
             class="game-card"
             href="balanceball/index.html"
-            data-title="balanceball
-balanceball"
+            data-title="balanceball"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -679,6 +887,7 @@ balanceball cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">balanceball balanceball</div>
               <div class="subtitle">Extras</div>
@@ -687,9 +896,10 @@ balanceball cover"
           <a
             class="game-card"
             href="battleday/index.html"
-            data-title="battleday
-battleday"
+            data-title="battleday"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -700,6 +910,7 @@ battleday cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">battleday battleday</div>
               <div class="subtitle">Action</div>
@@ -708,9 +919,10 @@ battleday cover"
           <a
             class="game-card"
             href="bdot/index.html"
-            data-title="bdot
-bdot"
+            data-title="bdot"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -721,6 +933,7 @@ bdot cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bdot bdot</div>
               <div class="subtitle">Extras</div>
@@ -729,9 +942,10 @@ bdot cover"
           <a
             class="game-card"
             href="birgly/index.html"
-            data-title="birgly
-birgly"
+            data-title="birgly"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -742,6 +956,7 @@ birgly cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">birgly birgly</div>
               <div class="subtitle">Extras</div>
@@ -750,9 +965,10 @@ birgly cover"
           <a
             class="game-card"
             href="blackbats/index.html"
-            data-title="blackbats
-blackbats"
+            data-title="blackbats"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -763,6 +979,7 @@ blackbats cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">blackbats blackbats</div>
               <div class="subtitle">Extras</div>
@@ -771,9 +988,10 @@ blackbats cover"
           <a
             class="game-card"
             href="bloxslider/index.html"
-            data-title="bloxslider
-bloxslider"
+            data-title="bloxslider"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -784,6 +1002,7 @@ bloxslider cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bloxslider bloxslider</div>
               <div class="subtitle">Extras</div>
@@ -792,9 +1011,10 @@ bloxslider cover"
           <a
             class="game-card"
             href="bottomtight/index.html"
-            data-title="bottomtight
-bottomtight"
+            data-title="bottomtight"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -805,6 +1025,7 @@ bottomtight cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bottomtight bottomtight</div>
               <div class="subtitle">Extras</div>
@@ -813,9 +1034,10 @@ bottomtight cover"
           <a
             class="game-card"
             href="bravebird/index.html"
-            data-title="bravebird
-bravebird"
+            data-title="bravebird"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -826,6 +1048,7 @@ bravebird cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bravebird bravebird</div>
               <div class="subtitle">Extras</div>
@@ -834,9 +1057,10 @@ bravebird cover"
           <a
             class="game-card"
             href="brokenhorn/index.html"
-            data-title="brokenhorn
-brokenhorn"
+            data-title="brokenhorn"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -847,6 +1071,7 @@ brokenhorn cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">brokenhorn brokenhorn</div>
               <div class="subtitle">Extras</div>
@@ -855,9 +1080,10 @@ brokenhorn cover"
           <a
             class="game-card"
             href="bubblecn/index.html"
-            data-title="bubblecn
-bubblecn"
+            data-title="bubblecn"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -868,6 +1094,7 @@ bubblecn cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bubblecn bubblecn</div>
               <div class="subtitle">Extras</div>
@@ -876,9 +1103,10 @@ bubblecn cover"
           <a
             class="game-card"
             href="bubblefish/index.html"
-            data-title="bubblefish
-bubblefish"
+            data-title="bubblefish"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -889,6 +1117,7 @@ bubblefish cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">bubblefish bubblefish</div>
               <div class="subtitle">Extras</div>
@@ -897,9 +1126,10 @@ bubblefish cover"
           <a
             class="game-card"
             href="burningrubber/index.html"
-            data-title="burningrubber
-burningrubber"
+            data-title="burningrubber"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -910,6 +1140,7 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">burningrubber burningrubber</div>
               <div class="subtitle">Extras</div>
@@ -918,9 +1149,10 @@ burningrubber cover"
           <a
             class="game-card"
             href="candyfusion/index.html"
-            data-title="candyfusion
-candyfusion"
+            data-title="candyfusion"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -931,6 +1163,7 @@ candyfusion cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">candyfusion candyfusion</div>
               <div class="subtitle">Extras</div>
@@ -939,9 +1172,10 @@ candyfusion cover"
           <a
             class="game-card"
             href="candypig/index.html"
-            data-title="candypig
-candypig"
+            data-title="candypig"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -952,6 +1186,7 @@ candypig cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">candypig candypig</div>
               <div class="subtitle">Extras</div>
@@ -960,9 +1195,10 @@ candypig cover"
           <a
             class="game-card"
             href="captainroger/index.html"
-            data-title="captainroger
-captainroger"
+            data-title="captainroger"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -973,6 +1209,7 @@ captainroger cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">captainroger captainroger</div>
               <div class="subtitle">Extras</div>
@@ -981,9 +1218,10 @@ captainroger cover"
           <a
             class="game-card"
             href="captainwar/index.html"
-            data-title="captainwar
-captainwar"
+            data-title="captainwar"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -994,6 +1232,7 @@ captainwar cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">captainwar captainwar</div>
               <div class="subtitle">Action</div>
@@ -1002,9 +1241,10 @@ captainwar cover"
           <a
             class="game-card"
             href="catonfire/index.html"
-            data-title="catonfire
-catonfire"
+            data-title="catonfire"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1015,6 +1255,7 @@ catonfire cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">catonfire catonfire</div>
               <div class="subtitle">Extras</div>
@@ -1023,9 +1264,10 @@ catonfire cover"
           <a
             class="game-card"
             href="cavejumper/index.html"
-            data-title="cavejumper
-cavejumper"
+            data-title="cavejumper"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1036,6 +1278,7 @@ cavejumper cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cavejumper cavejumper</div>
               <div class="subtitle">Arcade</div>
@@ -1044,9 +1287,10 @@ cavejumper cover"
           <a
             class="game-card"
             href="cboxes/index.html"
-            data-title="cboxes
-cboxes"
+            data-title="cboxes"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1057,6 +1301,7 @@ cboxes cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cboxes cboxes</div>
               <div class="subtitle">Extras</div>
@@ -1065,9 +1310,10 @@ cboxes cover"
           <a
             class="game-card"
             href="cheeselab/index.html"
-            data-title="cheeselab
-cheeselab"
+            data-title="cheeselab"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1078,6 +1324,7 @@ cheeselab cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cheeselab cheeselab</div>
               <div class="subtitle">Extras</div>
@@ -1086,9 +1333,10 @@ cheeselab cover"
           <a
             class="game-card"
             href="chipman/index.html"
-            data-title="chipman
-chipman"
+            data-title="chipman"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1099,6 +1347,7 @@ chipman cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">chipman chipman</div>
               <div class="subtitle">Extras</div>
@@ -1107,9 +1356,10 @@ chipman cover"
           <a
             class="game-card"
             href="christmasballs/index.html"
-            data-title="christmasballs
-christmasballs"
+            data-title="christmasballs"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1120,6 +1370,7 @@ christmasballs cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">christmasballs christmasballs</div>
               <div class="subtitle">Extras</div>
@@ -1128,9 +1379,10 @@ christmasballs cover"
           <a
             class="game-card"
             href="circleball/index.html"
-            data-title="circleball
-circleball"
+            data-title="circleball"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1141,6 +1393,7 @@ circleball cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">circleball circleball</div>
               <div class="subtitle">Extras</div>
@@ -1149,9 +1402,10 @@ circleball cover"
           <a
             class="game-card"
             href="circlepong/index.html"
-            data-title="circlepong
-circlepong"
+            data-title="circlepong"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1162,6 +1416,7 @@ circlepong cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">circlepong circlepong</div>
               <div class="subtitle">Extras</div>
@@ -1170,9 +1425,10 @@ circlepong cover"
           <a
             class="game-card"
             href="circletris/index.html"
-            data-title="circletris
-circletris"
+            data-title="circletris"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1183,6 +1439,7 @@ circletris cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">circletris circletris</div>
               <div class="subtitle">Extras</div>
@@ -1191,9 +1448,10 @@ circletris cover"
           <a
             class="game-card"
             href="cninjas/index.html"
-            data-title="cninjas
-cninjas"
+            data-title="cninjas"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1204,6 +1462,7 @@ cninjas cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cninjas cninjas</div>
               <div class="subtitle">Action</div>
@@ -1212,9 +1471,10 @@ cninjas cover"
           <a
             class="game-card"
             href="cowboyrun/index.html"
-            data-title="cowboyrun
-cowboyrun"
+            data-title="cowboyrun"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1225,6 +1485,7 @@ cowboyrun cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cowboyrun cowboyrun</div>
               <div class="subtitle">Arcade</div>
@@ -1233,9 +1494,10 @@ cowboyrun cover"
           <a
             class="game-card"
             href="cowboyshot/index.html"
-            data-title="cowboyshot
-cowboyshot"
+            data-title="cowboyshot"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1246,6 +1508,7 @@ cowboyshot cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cowboyshot cowboyshot</div>
               <div class="subtitle">Extras</div>
@@ -1254,9 +1517,10 @@ cowboyshot cover"
           <a
             class="game-card"
             href="craigenstone/index.html"
-            data-title="craigenstone
-craigenstone"
+            data-title="craigenstone"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1267,6 +1531,7 @@ craigenstone cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">craigenstone craigenstone</div>
               <div class="subtitle">Extras</div>
@@ -1275,9 +1540,10 @@ craigenstone cover"
           <a
             class="game-card"
             href="creedyrabbit/index.html"
-            data-title="creedyrabbit
-creedyrabbit"
+            data-title="creedyrabbit"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1288,6 +1554,7 @@ creedyrabbit cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">creedyrabbit creedyrabbit</div>
               <div class="subtitle">Extras</div>
@@ -1296,9 +1563,10 @@ creedyrabbit cover"
           <a
             class="game-card"
             href="crkarmax/index.html"
-            data-title="crkarmax
-crkarmax"
+            data-title="crkarmax"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1309,6 +1577,7 @@ crkarmax cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">crkarmax crkarmax</div>
               <div class="subtitle">Extras</div>
@@ -1317,9 +1586,10 @@ crkarmax cover"
           <a
             class="game-card"
             href="cubeninja/index.html"
-            data-title="cubeninja
-cubeninja"
+            data-title="cubeninja"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1330,6 +1600,7 @@ cubeninja cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">cubeninja cubeninja</div>
               <div class="subtitle">Action</div>
@@ -1338,9 +1609,10 @@ cubeninja cover"
           <a
             class="game-card"
             href="dangermouse/index.html"
-            data-title="dangermouse
-dangermouse"
+            data-title="dangermouse"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1351,6 +1623,7 @@ dangermouse cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">dangermouse dangermouse</div>
               <div class="subtitle">Extras</div>
@@ -1359,9 +1632,10 @@ dangermouse cover"
           <a
             class="game-card"
             href="dangerous/index.html"
-            data-title="dangerous
-dangerous"
+            data-title="dangerous"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1372,6 +1646,7 @@ dangerous cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">dangerous dangerous</div>
               <div class="subtitle">Extras</div>
@@ -1380,9 +1655,10 @@ dangerous cover"
           <a
             class="game-card"
             href="darkninja/index.html"
-            data-title="darkninja
-darkninja"
+            data-title="darkninja"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1393,6 +1669,7 @@ darkninja cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">darkninja darkninja</div>
               <div class="subtitle">Action</div>
@@ -1401,9 +1678,10 @@ darkninja cover"
           <a
             class="game-card"
             href="deathsoul/index.html"
-            data-title="deathsoul
-deathsoul"
+            data-title="deathsoul"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1414,6 +1692,7 @@ deathsoul cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">deathsoul deathsoul</div>
               <div class="subtitle">Extras</div>
@@ -1422,9 +1701,10 @@ deathsoul cover"
           <a
             class="game-card"
             href="donteattrash/index.html"
-            data-title="donteattrash
-donteattrash"
+            data-title="donteattrash"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1435,6 +1715,7 @@ donteattrash cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">donteattrash donteattrash</div>
               <div class="subtitle">Extras</div>
@@ -1443,9 +1724,10 @@ donteattrash cover"
           <a
             class="game-card"
             href="dotgame/index.html"
-            data-title="dotgame
-dotgame"
+            data-title="dotgame"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1456,6 +1738,7 @@ dotgame cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">dotgame dotgame</div>
               <div class="subtitle">Extras</div>
@@ -1464,9 +1747,10 @@ dotgame cover"
           <a
             class="game-card"
             href="dronewars/index.html"
-            data-title="dronewars
-dronewars"
+            data-title="dronewars"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1477,6 +1761,7 @@ dronewars cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">dronewars dronewars</div>
               <div class="subtitle">Action</div>
@@ -1485,9 +1770,10 @@ dronewars cover"
           <a
             class="game-card"
             href="dropcircle/index.html"
-            data-title="dropcircle
-dropcircle"
+            data-title="dropcircle"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1498,6 +1784,7 @@ dropcircle cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">dropcircle dropcircle</div>
               <div class="subtitle">Extras</div>
@@ -1506,9 +1793,10 @@ dropcircle cover"
           <a
             class="game-card"
             href="duckwater/index.html"
-            data-title="duckwater
-duckwater"
+            data-title="duckwater"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1519,6 +1807,7 @@ duckwater cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">duckwater duckwater</div>
               <div class="subtitle">Extras</div>
@@ -1527,9 +1816,10 @@ duckwater cover"
           <a
             class="game-card"
             href="elmore/index.html"
-            data-title="elmore
-elmore"
+            data-title="elmore"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1540,6 +1830,7 @@ elmore cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">elmore elmore</div>
               <div class="subtitle">Extras</div>
@@ -1548,9 +1839,10 @@ elmore cover"
           <a
             class="game-card"
             href="escape/index.html"
-            data-title="escape
-escape"
+            data-title="escape"
             data-group="Adventure"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1561,6 +1853,7 @@ escape cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">escape escape</div>
               <div class="subtitle">Adventure</div>
@@ -1569,9 +1862,10 @@ escape cover"
           <a
             class="game-card"
             href="evilrobot/index.html"
-            data-title="evilrobot
-evilrobot"
+            data-title="evilrobot"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1582,6 +1876,7 @@ evilrobot cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">evilrobot evilrobot</div>
               <div class="subtitle">Extras</div>
@@ -1590,9 +1885,10 @@ evilrobot cover"
           <a
             class="game-card"
             href="evilwyrm/index.html"
-            data-title="evilwyrm
-evilwyrm"
+            data-title="evilwyrm"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1603,6 +1899,7 @@ evilwyrm cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">evilwyrm evilwyrm</div>
               <div class="subtitle">Extras</div>
@@ -1611,9 +1908,10 @@ evilwyrm cover"
           <a
             class="game-card"
             href="fastgame/index.html"
-            data-title="fastgame
-fastgame"
+            data-title="fastgame"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1624,6 +1922,7 @@ fastgame cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">fastgame fastgame</div>
               <div class="subtitle">Extras</div>
@@ -1632,9 +1931,10 @@ fastgame cover"
           <a
             class="game-card"
             href="firebrigade/index.html"
-            data-title="firebrigade
-firebrigade"
+            data-title="firebrigade"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1645,6 +1945,7 @@ firebrigade cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">firebrigade firebrigade</div>
               <div class="subtitle">Extras</div>
@@ -1653,9 +1954,10 @@ firebrigade cover"
           <a
             class="game-card"
             href="fishingfrenzy/index.html"
-            data-title="fishingfrenzy
-fishingfrenzy"
+            data-title="fishingfrenzy"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1666,6 +1968,7 @@ fishingfrenzy cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">fishingfrenzy fishingfrenzy</div>
               <div class="subtitle">Extras</div>
@@ -1674,9 +1977,10 @@ fishingfrenzy cover"
           <a
             class="game-card"
             href="fishshot/index.html"
-            data-title="fishshot
-fishshot"
+            data-title="fishshot"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1687,6 +1991,7 @@ fishshot cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">fishshot fishshot</div>
               <div class="subtitle">Extras</div>
@@ -1695,9 +2000,10 @@ fishshot cover"
           <a
             class="game-card"
             href="flapcatcopters/index.html"
-            data-title="flapcatcopters
-flapcatcopters"
+            data-title="flapcatcopters"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1708,6 +2014,7 @@ flapcatcopters cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">flapcatcopters flapcatcopters</div>
               <div class="subtitle">Extras</div>
@@ -1716,9 +2023,10 @@ flapcatcopters cover"
           <a
             class="game-card"
             href="flapcatxmas/index.html"
-            data-title="flapcatxmas
-flapcatxmas"
+            data-title="flapcatxmas"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1729,6 +2037,7 @@ flapcatxmas cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">flapcatxmas flapcatxmas</div>
               <div class="subtitle">Extras</div>
@@ -1737,9 +2046,10 @@ flapcatxmas cover"
           <a
             class="game-card"
             href="flappydog/index.html"
-            data-title="flappydog
-flappydog"
+            data-title="flappydog"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1750,6 +2060,7 @@ flappydog cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">flappydog flappydog</div>
               <div class="subtitle">Arcade</div>
@@ -1758,9 +2069,10 @@ flappydog cover"
           <a
             class="game-card"
             href="flyingschool/index.html"
-            data-title="flyingschool
-flyingschool"
+            data-title="flyingschool"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1771,6 +2083,7 @@ flyingschool cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">flyingschool flyingschool</div>
               <div class="subtitle">Extras</div>
@@ -1779,9 +2092,10 @@ flyingschool cover"
           <a
             class="game-card"
             href="foofoo/index.html"
-            data-title="foofoo
-foofoo"
+            data-title="foofoo"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1792,6 +2106,7 @@ foofoo cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">foofoo foofoo</div>
               <div class="subtitle">Extras</div>
@@ -1800,9 +2115,10 @@ foofoo cover"
           <a
             class="game-card"
             href="foxfury/index.html"
-            data-title="foxfury
-foxfury"
+            data-title="foxfury"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1813,6 +2129,7 @@ foxfury cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">foxfury foxfury</div>
               <div class="subtitle">Extras</div>
@@ -1821,9 +2138,10 @@ foxfury cover"
           <a
             class="game-card"
             href="freedomroad/index.html"
-            data-title="freedomroad
-freedomroad"
+            data-title="freedomroad"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1834,6 +2152,7 @@ freedomroad cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">freedomroad freedomroad</div>
               <div class="subtitle">Extras</div>
@@ -1842,9 +2161,10 @@ freedomroad cover"
           <a
             class="game-card"
             href="frog/index.html"
-            data-title="frog
-frog"
+            data-title="frog"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1855,6 +2175,7 @@ frog cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">frog frog</div>
               <div class="subtitle">Extras</div>
@@ -1863,9 +2184,10 @@ frog cover"
           <a
             class="game-card"
             href="fullimmersion/index.html"
-            data-title="fullimmersion
-fullimmersion"
+            data-title="fullimmersion"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1876,6 +2198,7 @@ fullimmersion cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">fullimmersion fullimmersion</div>
               <div class="subtitle">Extras</div>
@@ -1884,9 +2207,10 @@ fullimmersion cover"
           <a
             class="game-card"
             href="funnysoccer/index.html"
-            data-title="funnysoccer
-funnysoccer"
+            data-title="funnysoccer"
             data-group="Sports"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1897,6 +2221,7 @@ funnysoccer cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">funnysoccer funnysoccer</div>
               <div class="subtitle">Sports</div>
@@ -1905,9 +2230,10 @@ funnysoccer cover"
           <a
             class="game-card"
             href="gettwelve/index.html"
-            data-title="gettwelve
-gettwelve"
+            data-title="gettwelve"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1918,6 +2244,7 @@ gettwelve cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">gettwelve gettwelve</div>
               <div class="subtitle">Extras</div>
@@ -1926,9 +2253,10 @@ gettwelve cover"
           <a
             class="game-card"
             href="goblinmachine/index.html"
-            data-title="goblinmachine
-goblinmachine"
+            data-title="goblinmachine"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1939,6 +2267,7 @@ goblinmachine cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">goblinmachine goblinmachine</div>
               <div class="subtitle">Extras</div>
@@ -1947,9 +2276,10 @@ goblinmachine cover"
           <a
             class="game-card"
             href="gofishing/index.html"
-            data-title="gofishing
-gofishing"
+            data-title="gofishing"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1960,6 +2290,7 @@ gofishing cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">gofishing gofishing</div>
               <div class="subtitle">Extras</div>
@@ -1968,9 +2299,10 @@ gofishing cover"
           <a
             class="game-card"
             href="goingnuts/index.html"
-            data-title="goingnuts
-goingnuts"
+            data-title="goingnuts"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -1981,6 +2313,7 @@ goingnuts cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">goingnuts goingnuts</div>
               <div class="subtitle">Extras</div>
@@ -1989,9 +2322,10 @@ goingnuts cover"
           <a
             class="game-card"
             href="greedygnomes/index.html"
-            data-title="greedygnomes
-greedygnomes"
+            data-title="greedygnomes"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2002,6 +2336,7 @@ greedygnomes cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">greedygnomes greedygnomes</div>
               <div class="subtitle">Extras</div>
@@ -2010,9 +2345,10 @@ greedygnomes cover"
           <a
             class="game-card"
             href="greenwings/index.html"
-            data-title="greenwings
-greenwings"
+            data-title="greenwings"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2023,6 +2359,7 @@ greenwings cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">greenwings greenwings</div>
               <div class="subtitle">Extras</div>
@@ -2031,9 +2368,10 @@ greenwings cover"
           <a
             class="game-card"
             href="groovyski/index.html"
-            data-title="groovyski
-groovyski"
+            data-title="groovyski"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2044,6 +2382,7 @@ groovyski cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">groovyski groovyski</div>
               <div class="subtitle">Extras</div>
@@ -2052,9 +2391,10 @@ groovyski cover"
           <a
             class="game-card"
             href="grubhub/index.html"
-            data-title="grubhub
-grubhub"
+            data-title="grubhub"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2065,6 +2405,7 @@ grubhub cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">grubhub grubhub</div>
               <div class="subtitle">Extras</div>
@@ -2073,9 +2414,10 @@ grubhub cover"
           <a
             class="game-card"
             href="gumballrace/index.html"
-            data-title="gumballrace
-gumballrace"
+            data-title="gumballrace"
             data-group="Racing"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2086,6 +2428,7 @@ gumballrace cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">gumballrace gumballrace</div>
               <div class="subtitle">Racing</div>
@@ -2094,9 +2437,10 @@ gumballrace cover"
           <a
             class="game-card"
             href="gunmach/index.html"
-            data-title="gunmach
-gunmach"
+            data-title="gunmach"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2107,6 +2451,7 @@ gunmach cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">gunmach gunmach</div>
               <div class="subtitle">Action</div>
@@ -2115,9 +2460,10 @@ gunmach cover"
           <a
             class="game-card"
             href="hanselandgretel/index.html"
-            data-title="hanselandgretel
-hanselandgretel"
+            data-title="hanselandgretel"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2128,6 +2474,7 @@ hanselandgretel cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">hanselandgretel hanselandgretel</div>
               <div class="subtitle">Extras</div>
@@ -2136,9 +2483,10 @@ hanselandgretel cover"
           <a
             class="game-card"
             href="herojump/index.html"
-            data-title="herojump
-herojump"
+            data-title="herojump"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2149,6 +2497,7 @@ herojump cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">herojump herojump</div>
               <div class="subtitle">Arcade</div>
@@ -2157,9 +2506,10 @@ herojump cover"
           <a
             class="game-card"
             href="hidden/index.html"
-            data-title="hidden
-hidden"
+            data-title="hidden"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2170,6 +2520,7 @@ hidden cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">hidden hidden</div>
               <div class="subtitle">Extras</div>
@@ -2178,9 +2529,10 @@ hidden cover"
           <a
             class="game-card"
             href="hungrybob/index.html"
-            data-title="hungrybob
-hungrybob"
+            data-title="hungrybob"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2191,6 +2543,7 @@ hungrybob cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">hungrybob hungrybob</div>
               <div class="subtitle">Extras</div>
@@ -2199,9 +2552,10 @@ hungrybob cover"
           <a
             class="game-card"
             href="hyperminer/index.html"
-            data-title="hyperminer
-hyperminer"
+            data-title="hyperminer"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2212,6 +2566,7 @@ hyperminer cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">hyperminer hyperminer</div>
               <div class="subtitle">Extras</div>
@@ -2220,9 +2575,10 @@ hyperminer cover"
           <a
             class="game-card"
             href="icecream/index.html"
-            data-title="icecream
-icecream"
+            data-title="icecream"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2233,6 +2589,7 @@ icecream cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">icecream icecream</div>
               <div class="subtitle">Extras</div>
@@ -2241,9 +2598,10 @@ icecream cover"
           <a
             class="game-card"
             href="isagame/index.html"
-            data-title="isagame
-isagame"
+            data-title="isagame"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2254,6 +2612,7 @@ isagame cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">isagame isagame</div>
               <div class="subtitle">Extras</div>
@@ -2262,9 +2621,10 @@ isagame cover"
           <a
             class="game-card"
             href="jellydoods/index.html"
-            data-title="jellydoods
-jellydoods"
+            data-title="jellydoods"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2275,6 +2635,7 @@ jellydoods cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jellydoods jellydoods</div>
               <div class="subtitle">Extras</div>
@@ -2283,9 +2644,10 @@ jellydoods cover"
           <a
             class="game-card"
             href="jellyslice/index.html"
-            data-title="jellyslice
-jellyslice"
+            data-title="jellyslice"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2296,6 +2658,7 @@ jellyslice cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jellyslice jellyslice</div>
               <div class="subtitle">Extras</div>
@@ -2304,9 +2667,10 @@ jellyslice cover"
           <a
             class="game-card"
             href="jomjom/index.html"
-            data-title="jomjom
-jomjom"
+            data-title="jomjom"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2317,6 +2681,7 @@ jomjom cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jomjom jomjom</div>
               <div class="subtitle">Extras</div>
@@ -2325,9 +2690,10 @@ jomjom cover"
           <a
             class="game-card"
             href="jump2048/index.html"
-            data-title="jump2048
-jump2048"
+            data-title="jump2048"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2338,6 +2704,7 @@ jump2048 cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jump2048 jump2048</div>
               <div class="subtitle">Arcade</div>
@@ -2346,9 +2713,10 @@ jump2048 cover"
           <a
             class="game-card"
             href="jumpkitty/index.html"
-            data-title="jumpkitty
-jumpkitty"
+            data-title="jumpkitty"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2359,6 +2727,7 @@ jumpkitty cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jumpkitty jumpkitty</div>
               <div class="subtitle">Arcade</div>
@@ -2367,9 +2736,10 @@ jumpkitty cover"
           <a
             class="game-card"
             href="jumpman/index.html"
-            data-title="jumpman
-jumpman"
+            data-title="jumpman"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2380,6 +2750,7 @@ jumpman cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jumpman jumpman</div>
               <div class="subtitle">Arcade</div>
@@ -2388,9 +2759,10 @@ jumpman cover"
           <a
             class="game-card"
             href="jumppydog/index.html"
-            data-title="jumppydog
-jumppydog"
+            data-title="jumppydog"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2401,6 +2773,7 @@ jumppydog cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jumppydog jumppydog</div>
               <div class="subtitle">Arcade</div>
@@ -2409,9 +2782,10 @@ jumppydog cover"
           <a
             class="game-card"
             href="jumppydragon/index.html"
-            data-title="jumppydragon
-jumppydragon"
+            data-title="jumppydragon"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2422,6 +2796,7 @@ jumppydragon cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">jumppydragon jumppydragon</div>
               <div class="subtitle">Arcade</div>
@@ -2430,9 +2805,10 @@ jumppydragon cover"
           <a
             class="game-card"
             href="knightnday/index.html"
-            data-title="knightnday
-knightnday"
+            data-title="knightnday"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2443,6 +2819,7 @@ knightnday cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">knightnday knightnday</div>
               <div class="subtitle">Extras</div>
@@ -2451,9 +2828,10 @@ knightnday cover"
           <a
             class="game-card"
             href="lizardrocket/index.html"
-            data-title="lizardrocket
-lizardrocket"
+            data-title="lizardrocket"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2464,6 +2842,7 @@ lizardrocket cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">lizardrocket lizardrocket</div>
               <div class="subtitle">Extras</div>
@@ -2472,9 +2851,10 @@ lizardrocket cover"
           <a
             class="game-card"
             href="looneyroonks/index.html"
-            data-title="looneyroonks
-looneyroonks"
+            data-title="looneyroonks"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2485,6 +2865,7 @@ looneyroonks cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">looneyroonks looneyroonks</div>
               <div class="subtitle">Extras</div>
@@ -2493,9 +2874,10 @@ looneyroonks cover"
           <a
             class="game-card"
             href="luxahoy/index.html"
-            data-title="luxahoy
-luxahoy"
+            data-title="luxahoy"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2506,6 +2888,7 @@ luxahoy cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">luxahoy luxahoy</div>
               <div class="subtitle">Extras</div>
@@ -2514,9 +2897,10 @@ luxahoy cover"
           <a
             class="game-card"
             href="manic/index.html"
-            data-title="manic
-manic"
+            data-title="manic"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2527,6 +2911,7 @@ manic cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">manic manic</div>
               <div class="subtitle">Extras</div>
@@ -2535,9 +2920,10 @@ manic cover"
           <a
             class="game-card"
             href="matchtime/index.html"
-            data-title="matchtime
-matchtime"
+            data-title="matchtime"
             data-group="Puzzle"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2548,6 +2934,7 @@ matchtime cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">matchtime matchtime</div>
               <div class="subtitle">Puzzle</div>
@@ -2556,9 +2943,10 @@ matchtime cover"
           <a
             class="game-card"
             href="mathgame/index.html"
-            data-title="mathgame
-mathgame"
+            data-title="mathgame"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2569,6 +2957,7 @@ mathgame cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">mathgame mathgame</div>
               <div class="subtitle">Extras</div>
@@ -2577,9 +2966,10 @@ mathgame cover"
           <a
             class="game-card"
             href="mixthesquare/index.html"
-            data-title="mixthesquare
-mixthesquare"
+            data-title="mixthesquare"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2590,6 +2980,7 @@ mixthesquare cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">mixthesquare mixthesquare</div>
               <div class="subtitle">Extras</div>
@@ -2598,9 +2989,10 @@ mixthesquare cover"
           <a
             class="game-card"
             href="monstercandy/index.html"
-            data-title="monstercandy
-monstercandy"
+            data-title="monstercandy"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2611,6 +3003,7 @@ monstercandy cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">monstercandy monstercandy</div>
               <div class="subtitle">Extras</div>
@@ -2619,9 +3012,10 @@ monstercandy cover"
           <a
             class="game-card"
             href="monstereater/index.html"
-            data-title="monstereater
-monstereater"
+            data-title="monstereater"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2632,6 +3026,7 @@ monstereater cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">monstereater monstereater</div>
               <div class="subtitle">Extras</div>
@@ -2640,9 +3035,10 @@ monstereater cover"
           <a
             class="game-card"
             href="mousejump/index.html"
-            data-title="mousejump
-mousejump"
+            data-title="mousejump"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2653,6 +3049,7 @@ mousejump cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">mousejump mousejump</div>
               <div class="subtitle">Arcade</div>
@@ -2661,9 +3058,10 @@ mousejump cover"
           <a
             class="game-card"
             href="mypuki/index.html"
-            data-title="mypuki
-mypuki"
+            data-title="mypuki"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2674,6 +3072,7 @@ mypuki cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">mypuki mypuki</div>
               <div class="subtitle">Extras</div>
@@ -2682,9 +3081,10 @@ mypuki cover"
           <a
             class="game-card"
             href="nest/index.html"
-            data-title="nest
-nest"
+            data-title="nest"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2695,6 +3095,7 @@ nest cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">nest nest</div>
               <div class="subtitle">Extras</div>
@@ -2703,9 +3104,10 @@ nest cover"
           <a
             class="game-card"
             href="ninjablade/index.html"
-            data-title="ninjablade
-ninjablade"
+            data-title="ninjablade"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2716,6 +3118,7 @@ ninjablade cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ninjablade ninjablade</div>
               <div class="subtitle">Action</div>
@@ -2724,9 +3127,10 @@ ninjablade cover"
           <a
             class="game-card"
             href="ninjablock/index.html"
-            data-title="ninjablock
-ninjablock"
+            data-title="ninjablock"
             data-group="Puzzle"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2737,6 +3141,7 @@ ninjablock cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ninjablock ninjablock</div>
               <div class="subtitle">Puzzle</div>
@@ -2745,9 +3150,10 @@ ninjablock cover"
           <a
             class="game-card"
             href="ninjakidvszb/index.html"
-            data-title="ninjakidvszb
-ninjakidvszb"
+            data-title="ninjakidvszb"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2758,6 +3164,7 @@ ninjakidvszb cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ninjakidvszb ninjakidvszb</div>
               <div class="subtitle">Action</div>
@@ -2766,9 +3173,10 @@ ninjakidvszb cover"
           <a
             class="game-card"
             href="ninjarun/index.html"
-            data-title="ninjarun
-ninjarun"
+            data-title="ninjarun"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2779,6 +3187,7 @@ ninjarun cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ninjarun ninjarun</div>
               <div class="subtitle">Arcade</div>
@@ -2787,9 +3196,10 @@ ninjarun cover"
           <a
             class="game-card"
             href="ninjaway/index.html"
-            data-title="ninjaway
-ninjaway"
+            data-title="ninjaway"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2800,6 +3210,7 @@ ninjaway cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ninjaway ninjaway</div>
               <div class="subtitle">Action</div>
@@ -2808,9 +3219,10 @@ ninjaway cover"
           <a
             class="game-card"
             href="nugget_seeker/index.html"
-            data-title="nugget_seeker
-nugget_seeker"
+            data-title="nugget_seeker"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2821,6 +3233,7 @@ nugget_seeker cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">nugget_seeker nugget_seeker</div>
               <div class="subtitle">Extras</div>
@@ -2829,9 +3242,10 @@ nugget_seeker cover"
           <a
             class="game-card"
             href="ojelloonline/index.html"
-            data-title="ojelloonline
-ojelloonline"
+            data-title="ojelloonline"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2842,6 +3256,7 @@ ojelloonline cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ojelloonline ojelloonline</div>
               <div class="subtitle">Extras</div>
@@ -2850,9 +3265,10 @@ ojelloonline cover"
           <a
             class="game-card"
             href="pacman/index.html"
-            data-title="pacman
-pacman"
+            data-title="pacman"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2863,6 +3279,7 @@ pacman cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pacman pacman</div>
               <div class="subtitle">Arcade</div>
@@ -2871,9 +3288,10 @@ pacman cover"
           <a
             class="game-card"
             href="pancakeboss/index.html"
-            data-title="pancakeboss
-pancakeboss"
+            data-title="pancakeboss"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2884,6 +3302,7 @@ pancakeboss cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pancakeboss pancakeboss</div>
               <div class="subtitle">Extras</div>
@@ -2892,9 +3311,10 @@ pancakeboss cover"
           <a
             class="game-card"
             href="pandaflash/index.html"
-            data-title="pandaflash
-pandaflash"
+            data-title="pandaflash"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2905,6 +3325,7 @@ pandaflash cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pandaflash pandaflash</div>
               <div class="subtitle">Extras</div>
@@ -2913,9 +3334,10 @@ pandaflash cover"
           <a
             class="game-card"
             href="pebbleboy/index.html"
-            data-title="pebbleboy
-pebbleboy"
+            data-title="pebbleboy"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2926,6 +3348,7 @@ pebbleboy cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pebbleboy pebbleboy</div>
               <div class="subtitle">Extras</div>
@@ -2934,9 +3357,10 @@ pebbleboy cover"
           <a
             class="game-card"
             href="penguin/index.html"
-            data-title="penguin
-penguin"
+            data-title="penguin"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2947,6 +3371,7 @@ penguin cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">penguin penguin</div>
               <div class="subtitle">Extras</div>
@@ -2955,9 +3380,10 @@ penguin cover"
           <a
             class="game-card"
             href="periperi/index.html"
-            data-title="periperi
-periperi"
+            data-title="periperi"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2968,6 +3394,7 @@ periperi cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">periperi periperi</div>
               <div class="subtitle">Extras</div>
@@ -2976,9 +3403,10 @@ periperi cover"
           <a
             class="game-card"
             href="pieattack/index.html"
-            data-title="pieattack
-pieattack"
+            data-title="pieattack"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -2989,6 +3417,7 @@ pieattack cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pieattack pieattack</div>
               <div class="subtitle">Extras</div>
@@ -2997,9 +3426,10 @@ pieattack cover"
           <a
             class="game-card"
             href="pigeon/index.html"
-            data-title="pigeon
-pigeon"
+            data-title="pigeon"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3010,6 +3440,7 @@ pigeon cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pigeon pigeon</div>
               <div class="subtitle">Extras</div>
@@ -3018,9 +3449,10 @@ pigeon cover"
           <a
             class="game-card"
             href="piggyroll/index.html"
-            data-title="piggyroll
-piggyroll"
+            data-title="piggyroll"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3031,6 +3463,7 @@ piggyroll cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">piggyroll piggyroll</div>
               <div class="subtitle">Extras</div>
@@ -3039,9 +3472,10 @@ piggyroll cover"
           <a
             class="game-card"
             href="piratekid/index.html"
-            data-title="piratekid
-piratekid"
+            data-title="piratekid"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3052,6 +3486,7 @@ piratekid cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">piratekid piratekid</div>
               <div class="subtitle">Extras</div>
@@ -3060,9 +3495,10 @@ piratekid cover"
           <a
             class="game-card"
             href="pitana/index.html"
-            data-title="pitana
-pitana"
+            data-title="pitana"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3073,6 +3509,7 @@ pitana cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pitana pitana</div>
               <div class="subtitle">Extras</div>
@@ -3081,9 +3518,10 @@ pitana cover"
           <a
             class="game-card"
             href="popup/index.html"
-            data-title="popup
-popup"
+            data-title="popup"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3094,6 +3532,7 @@ popup cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">popup popup</div>
               <div class="subtitle">Extras</div>
@@ -3102,9 +3541,10 @@ popup cover"
           <a
             class="game-card"
             href="portalrunner/index.html"
-            data-title="portalrunner
-portalrunner"
+            data-title="portalrunner"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3115,6 +3555,7 @@ portalrunner cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">portalrunner portalrunner</div>
               <div class="subtitle">Arcade</div>
@@ -3123,9 +3564,10 @@ portalrunner cover"
           <a
             class="game-card"
             href="pyramidjump/index.html"
-            data-title="pyramidjump
-pyramidjump"
+            data-title="pyramidjump"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3136,6 +3578,7 @@ pyramidjump cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">pyramidjump pyramidjump</div>
               <div class="subtitle">Arcade</div>
@@ -3144,9 +3587,10 @@ pyramidjump cover"
           <a
             class="game-card"
             href="raccoonrun/index.html"
-            data-title="raccoonrun
-raccoonrun"
+            data-title="raccoonrun"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3157,6 +3601,7 @@ raccoonrun cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">raccoonrun raccoonrun</div>
               <div class="subtitle">Arcade</div>
@@ -3165,9 +3610,10 @@ raccoonrun cover"
           <a
             class="game-card"
             href="rainbox/index.html"
-            data-title="rainbox
-rainbox"
+            data-title="rainbox"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3178,6 +3624,7 @@ rainbox cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">rainbox rainbox</div>
               <div class="subtitle">Extras</div>
@@ -3186,9 +3633,10 @@ rainbox cover"
           <a
             class="game-card"
             href="rapunzel/index.html"
-            data-title="rapunzel
-rapunzel"
+            data-title="rapunzel"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3199,6 +3647,7 @@ rapunzel cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">rapunzel rapunzel</div>
               <div class="subtitle">Extras</div>
@@ -3207,9 +3656,10 @@ rapunzel cover"
           <a
             class="game-card"
             href="rectangzings/index.html"
-            data-title="rectangzings
-rectangzings"
+            data-title="rectangzings"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3220,6 +3670,7 @@ rectangzings cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">rectangzings rectangzings</div>
               <div class="subtitle">Extras</div>
@@ -3228,9 +3679,10 @@ rectangzings cover"
           <a
             class="game-card"
             href="reflector/index.html"
-            data-title="reflector
-reflector"
+            data-title="reflector"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3241,6 +3693,7 @@ reflector cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">reflector reflector</div>
               <div class="subtitle">Extras</div>
@@ -3249,9 +3702,10 @@ reflector cover"
           <a
             class="game-card"
             href="robotion/index.html"
-            data-title="robotion
-robotion"
+            data-title="robotion"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3262,6 +3716,7 @@ robotion cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">robotion robotion</div>
               <div class="subtitle">Extras</div>
@@ -3270,9 +3725,10 @@ robotion cover"
           <a
             class="game-card"
             href="rocketpop/index.html"
-            data-title="rocketpop
-rocketpop"
+            data-title="rocketpop"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3283,6 +3739,7 @@ rocketpop cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">rocketpop rocketpop</div>
               <div class="subtitle">Extras</div>
@@ -3291,9 +3748,10 @@ rocketpop cover"
           <a
             class="game-card"
             href="ropeninja/index.html"
-            data-title="ropeninja
-ropeninja"
+            data-title="ropeninja"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3304,6 +3762,7 @@ ropeninja cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">ropeninja ropeninja</div>
               <div class="subtitle">Action</div>
@@ -3312,9 +3771,10 @@ ropeninja cover"
           <a
             class="game-card"
             href="runneryodas/index.html"
-            data-title="runneryodas
-runneryodas"
+            data-title="runneryodas"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3325,6 +3785,7 @@ runneryodas cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">runneryodas runneryodas</div>
               <div class="subtitle">Arcade</div>
@@ -3333,9 +3794,10 @@ runneryodas cover"
           <a
             class="game-card"
             href="runpixierun/index.html"
-            data-title="runpixierun
-runpixierun"
+            data-title="runpixierun"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3346,6 +3808,7 @@ runpixierun cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">runpixierun runpixierun</div>
               <div class="subtitle">Arcade</div>
@@ -3354,9 +3817,10 @@ runpixierun cover"
           <a
             class="game-card"
             href="sallybbq/index.html"
-            data-title="sallybbq
-sallybbq"
+            data-title="sallybbq"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3367,6 +3831,7 @@ sallybbq cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">sallybbq sallybbq</div>
               <div class="subtitle">Extras</div>
@@ -3375,9 +3840,10 @@ sallybbq cover"
           <a
             class="game-card"
             href="sambogart/index.html"
-            data-title="sambogart
-sambogart"
+            data-title="sambogart"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3388,6 +3854,7 @@ sambogart cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">sambogart sambogart</div>
               <div class="subtitle">Extras</div>
@@ -3396,9 +3863,10 @@ sambogart cover"
           <a
             class="game-card"
             href="silverarrow/index.html"
-            data-title="silverarrow
-silverarrow"
+            data-title="silverarrow"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3409,6 +3877,7 @@ silverarrow cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">silverarrow silverarrow</div>
               <div class="subtitle">Extras</div>
@@ -3417,9 +3886,10 @@ silverarrow cover"
           <a
             class="game-card"
             href="skylands/index.html"
-            data-title="skylands
-skylands"
+            data-title="skylands"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3430,6 +3900,7 @@ skylands cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">skylands skylands</div>
               <div class="subtitle">Extras</div>
@@ -3438,9 +3909,10 @@ skylands cover"
           <a
             class="game-card"
             href="skyrace/index.html"
-            data-title="skyrace
-skyrace"
+            data-title="skyrace"
             data-group="Racing"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3451,6 +3923,7 @@ skyrace cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">skyrace skyrace</div>
               <div class="subtitle">Racing</div>
@@ -3459,9 +3932,10 @@ skyrace cover"
           <a
             class="game-card"
             href="skytte/index.html"
-            data-title="skytte
-skytte"
+            data-title="skytte"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3472,6 +3946,7 @@ skytte cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">skytte skytte</div>
               <div class="subtitle">Extras</div>
@@ -3480,9 +3955,10 @@ skytte cover"
           <a
             class="game-card"
             href="skywire/index.html"
-            data-title="skywire
-skywire"
+            data-title="skywire"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3493,6 +3969,7 @@ skywire cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">skywire skywire</div>
               <div class="subtitle">Extras</div>
@@ -3501,9 +3978,10 @@ skywire cover"
           <a
             class="game-card"
             href="slotchicken/index.html"
-            data-title="slotchicken
-slotchicken"
+            data-title="slotchicken"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3514,6 +3992,7 @@ slotchicken cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">slotchicken slotchicken</div>
               <div class="subtitle">Extras</div>
@@ -3522,9 +4001,10 @@ slotchicken cover"
           <a
             class="game-card"
             href="sortbird/index.html"
-            data-title="sortbird
-sortbird"
+            data-title="sortbird"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3535,6 +4015,7 @@ sortbird cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">sortbird sortbird</div>
               <div class="subtitle">Extras</div>
@@ -3543,9 +4024,10 @@ sortbird cover"
           <a
             class="game-card"
             href="spacecowboy/index.html"
-            data-title="spacecowboy
-spacecowboy"
+            data-title="spacecowboy"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3556,6 +4038,7 @@ spacecowboy cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">spacecowboy spacecowboy</div>
               <div class="subtitle">Extras</div>
@@ -3564,9 +4047,10 @@ spacecowboy cover"
           <a
             class="game-card"
             href="spicy/index.html"
-            data-title="spicy
-spicy"
+            data-title="spicy"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3577,6 +4061,7 @@ spicy cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">spicy spicy</div>
               <div class="subtitle">Extras</div>
@@ -3585,9 +4070,10 @@ spicy cover"
           <a
             class="game-card"
             href="springninja/index.html"
-            data-title="springninja
-springninja"
+            data-title="springninja"
             data-group="Action"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3598,6 +4084,7 @@ springninja cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">springninja springninja</div>
               <div class="subtitle">Action</div>
@@ -3606,9 +4093,10 @@ springninja cover"
           <a
             class="game-card"
             href="squarecrush/index.html"
-            data-title="squarecrush
-squarecrush"
+            data-title="squarecrush"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3619,6 +4107,7 @@ squarecrush cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">squarecrush squarecrush</div>
               <div class="subtitle">Extras</div>
@@ -3627,9 +4116,10 @@ squarecrush cover"
           <a
             class="game-card"
             href="stevenkash/index.html"
-            data-title="stevenkash
-stevenkash"
+            data-title="stevenkash"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3640,6 +4130,7 @@ stevenkash cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">stevenkash stevenkash</div>
               <div class="subtitle">Extras</div>
@@ -3648,9 +4139,10 @@ stevenkash cover"
           <a
             class="game-card"
             href="stickpanda/index.html"
-            data-title="stickpanda
-stickpanda"
+            data-title="stickpanda"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3661,6 +4153,7 @@ stickpanda cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">stickpanda stickpanda</div>
               <div class="subtitle">Extras</div>
@@ -3669,9 +4162,10 @@ stickpanda cover"
           <a
             class="game-card"
             href="stickpandaxmas/index.html"
-            data-title="stickpandaxmas
-stickpandaxmas"
+            data-title="stickpandaxmas"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3682,6 +4176,7 @@ stickpandaxmas cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">stickpandaxmas stickpandaxmas</div>
               <div class="subtitle">Extras</div>
@@ -3690,9 +4185,10 @@ stickpandaxmas cover"
           <a
             class="game-card"
             href="sticksamurai/index.html"
-            data-title="sticksamurai
-sticksamurai"
+            data-title="sticksamurai"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3703,6 +4199,7 @@ sticksamurai cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">sticksamurai sticksamurai</div>
               <div class="subtitle">Extras</div>
@@ -3711,9 +4208,10 @@ sticksamurai cover"
           <a
             class="game-card"
             href="stickygoo/index.html"
-            data-title="stickygoo
-stickygoo"
+            data-title="stickygoo"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3724,6 +4222,7 @@ stickygoo cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">stickygoo stickygoo</div>
               <div class="subtitle">Extras</div>
@@ -3732,9 +4231,10 @@ stickygoo cover"
           <a
             class="game-card"
             href="strangespace/index.html"
-            data-title="strangespace
-strangespace"
+            data-title="strangespace"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3745,6 +4245,7 @@ strangespace cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">strangespace strangespace</div>
               <div class="subtitle">Extras</div>
@@ -3753,9 +4254,10 @@ strangespace cover"
           <a
             class="game-card"
             href="taptapsubmarine/index.html"
-            data-title="taptapsubmarine
-taptapsubmarine"
+            data-title="taptapsubmarine"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3766,6 +4268,7 @@ taptapsubmarine cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">taptapsubmarine taptapsubmarine</div>
               <div class="subtitle">Extras</div>
@@ -3774,9 +4277,10 @@ taptapsubmarine cover"
           <a
             class="game-card"
             href="targetap/index.html"
-            data-title="targetap
-targetap"
+            data-title="targetap"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3787,6 +4291,7 @@ targetap cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">targetap targetap</div>
               <div class="subtitle">Extras</div>
@@ -3795,9 +4300,10 @@ targetap cover"
           <a
             class="game-card"
             href="tetrisclassic/index.html"
-            data-title="tetrisclassic
-tetrisclassic"
+            data-title="tetrisclassic"
             data-group="Puzzle"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3808,6 +4314,7 @@ tetrisclassic cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">tetrisclassic tetrisclassic</div>
               <div class="subtitle">Puzzle</div>
@@ -3816,9 +4323,10 @@ tetrisclassic cover"
           <a
             class="game-card"
             href="titanrunner/index.html"
-            data-title="titanrunner
-titanrunner"
+            data-title="titanrunner"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3829,6 +4337,7 @@ titanrunner cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">titanrunner titanrunner</div>
               <div class="subtitle">Arcade</div>
@@ -3837,9 +4346,10 @@ titanrunner cover"
           <a
             class="game-card"
             href="tooncup/index.html"
-            data-title="tooncup
-tooncup"
+            data-title="tooncup"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3850,6 +4360,7 @@ tooncup cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">tooncup tooncup</div>
               <div class="subtitle">Extras</div>
@@ -3858,9 +4369,10 @@ tooncup cover"
           <a
             class="game-card"
             href="trailblazer/index.html"
-            data-title="trailblazer
-trailblazer"
+            data-title="trailblazer"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3871,6 +4383,7 @@ trailblazer cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">trailblazer trailblazer</div>
               <div class="subtitle">Extras</div>
@@ -3879,9 +4392,10 @@ trailblazer cover"
           <a
             class="game-card"
             href="trashndash/index.html"
-            data-title="trashndash
-trashndash"
+            data-title="trashndash"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3892,6 +4406,7 @@ trashndash cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">trashndash trashndash</div>
               <div class="subtitle">Extras</div>
@@ -3900,9 +4415,10 @@ trashndash cover"
           <a
             class="game-card"
             href="trollboxing/index.html"
-            data-title="trollboxing
-trollboxing"
+            data-title="trollboxing"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3913,6 +4429,7 @@ trollboxing cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">trollboxing trollboxing</div>
               <div class="subtitle">Extras</div>
@@ -3921,9 +4438,10 @@ trollboxing cover"
           <a
             class="game-card"
             href="uforun/index.html"
-            data-title="uforun
-uforun"
+            data-title="uforun"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3934,6 +4452,7 @@ uforun cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">uforun uforun</div>
               <div class="subtitle">Arcade</div>
@@ -3942,9 +4461,10 @@ uforun cover"
           <a
             class="game-card"
             href="veggirabbit/index.html"
-            data-title="veggirabbit
-veggirabbit"
+            data-title="veggirabbit"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3955,6 +4475,7 @@ veggirabbit cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">veggirabbit veggirabbit</div>
               <div class="subtitle">Extras</div>
@@ -3963,9 +4484,10 @@ veggirabbit cover"
           <a
             class="game-card"
             href="viking/index.html"
-            data-title="viking
-viking"
+            data-title="viking"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3976,6 +4498,7 @@ viking cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">viking viking</div>
               <div class="subtitle">Extras</div>
@@ -3984,9 +4507,10 @@ viking cover"
           <a
             class="game-card"
             href="woodblock/index.html"
-            data-title="woodblock
-woodblock"
+            data-title="woodblock"
             data-group="Puzzle"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -3997,6 +4521,7 @@ woodblock cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">woodblock woodblock</div>
               <div class="subtitle">Puzzle</div>
@@ -4005,9 +4530,10 @@ woodblock cover"
           <a
             class="game-card"
             href="xtypesky/index.html"
-            data-title="xtypesky
-xtypesky"
+            data-title="xtypesky"
             data-group="Sports"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4018,6 +4544,7 @@ xtypesky cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">xtypesky xtypesky</div>
               <div class="subtitle">Sports</div>
@@ -4026,9 +4553,10 @@ xtypesky cover"
           <a
             class="game-card"
             href="zapaliens/index.html"
-            data-title="zapaliens
-zapaliens"
+            data-title="zapaliens"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4039,6 +4567,7 @@ zapaliens cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zapaliens zapaliens</div>
               <div class="subtitle">Extras</div>
@@ -4047,9 +4576,10 @@ zapaliens cover"
           <a
             class="game-card"
             href="zcj2/index.html"
-            data-title="zcj2
-zcj2"
+            data-title="zcj2"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4060,6 +4590,7 @@ zcj2 cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zcj2 zcj2</div>
               <div class="subtitle">Extras</div>
@@ -4068,9 +4599,10 @@ zcj2 cover"
           <a
             class="game-card"
             href="zombie-dungeon/index.html"
-            data-title="zombie-dungeon
-zombie-dungeon"
+            data-title="zombie-dungeon"
             data-group="Adventure"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4081,6 +4613,7 @@ zombie-dungeon cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zombie-dungeon zombie-dungeon</div>
               <div class="subtitle">Adventure</div>
@@ -4089,9 +4622,10 @@ zombie-dungeon cover"
           <a
             class="game-card"
             href="zombieinfect/index.html"
-            data-title="zombieinfect
-zombieinfect"
+            data-title="zombieinfect"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4102,6 +4636,7 @@ zombieinfect cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zombieinfect zombieinfect</div>
               <div class="subtitle">Extras</div>
@@ -4110,9 +4645,10 @@ zombieinfect cover"
           <a
             class="game-card"
             href="zombienight/index.html"
-            data-title="zombienight
-zombienight"
+            data-title="zombienight"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4123,6 +4659,7 @@ zombienight cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zombienight zombienight</div>
               <div class="subtitle">Extras</div>
@@ -4131,9 +4668,10 @@ zombienight cover"
           <a
             class="game-card"
             href="zombiescantjump/index.html"
-            data-title="zombiescantjump
-zombiescantjump"
+            data-title="zombiescantjump"
             data-group="Arcade"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4144,6 +4682,7 @@ zombiescantjump cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zombiescantjump zombiescantjump</div>
               <div class="subtitle">Arcade</div>
@@ -4152,9 +4691,10 @@ zombiescantjump cover"
           <a
             class="game-card"
             href="zombieworld/index.html"
-            data-title="zombieworld
-zombieworld"
+            data-title="zombieworld"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4165,6 +4705,7 @@ zombieworld cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zombieworld zombieworld</div>
               <div class="subtitle">Extras</div>
@@ -4173,9 +4714,10 @@ zombieworld cover"
           <a
             class="game-card"
             href="zoostuner/index.html"
-            data-title="zoostuner
-zoostuner"
+            data-title="zoostuner"
             data-group="Extras"
+            data-order="0"
+            data-played="0"
           >
             <div class="img-wrap">
               <img
@@ -4186,6 +4728,7 @@ zoostuner cover"
                 loading="lazy"
               />
             </div>
+            <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="title">zoostuner zoostuner</div>
               <div class="subtitle">Extras</div>
@@ -4222,24 +4765,24 @@ zoostuner cover"
         <div id="group-list" class="group-list"></div>
       </section>
     </main>
-  
-<nav class="tabbar">
-  <button class="tab-btn active">
-    <span>🏠</span>
-    <span>Home</span>
-  </button>
-  <button class="tab-btn">
-    <span>🎮</span>
-    <span>My Games</span>
-  </button>
-  <button class="tab-btn">
-    <span>🏆</span>
-    <span>Leaderboard</span>
-  </button>
-  <button class="tab-btn">
-    <span>👤</span>
-    <span>Profile</span>
-  </button>
-</nav>
-</body>
+
+    <nav class="tabbar">
+      <button class="tab-btn active">
+        <span>🏠</span>
+        <span>Home</span>
+      </button>
+      <button class="tab-btn">
+        <span>🎮</span>
+        <span>My Games</span>
+      </button>
+      <button class="tab-btn">
+        <span>🏆</span>
+        <span>Leaderboard</span>
+      </button>
+      <button class="tab-btn">
+        <span>👤</span>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </body>
 </html>
