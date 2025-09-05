@@ -27,6 +27,18 @@
         function normalize(s) {
           return (s || "").toString().trim().toLowerCase();
         }
+        function showAd() {
+          AdController.show()
+            .then((result) => {
+              // ✅ Ad watched fully
+              alert("You earned 50 coins!");
+              // Here you can update user balance
+            })
+            .catch((err) => {
+              // ❌ Ad failed or closed early
+              console.error("Ad error:", err);
+            });
+        }
 
         function escapeHtml(str) {
           if (!str) return "";
@@ -301,15 +313,7 @@
                 loading="lazy"
               />
             </div>
-            <script>
-            try {
-    // code to show banner
-  await window.Adsgram.init({ blockId: "int-14600" }).show();
-} catch (error) {
-    // user get error during playing ad or no banner to show
-    // do nothing or whatever you want
-}
-              </script>
+            <button onclick="showAd()">🎥 Watch Ad for Coins</button>
             <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="badge">🔥 Hot</div>
