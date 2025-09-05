@@ -4,11 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TMA Games</title>
-<!--     <script
-      src="//libtl.com/sdk.js"
-      data-zone="9829119"
-      data-sdk="show_9829119"
-    ></script> -->
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link
@@ -16,7 +11,7 @@
       rel="stylesheet"
     />
     <script>
-      const AdController = window.Adsgram.init({ blockId: "int-14608" debug: true});
+      const AdController = window.Adsgram.init({ blockId: "int-14600" debug=true});
       (function () {
         const DEBUG = false; // set true to see console logs during testing
         const log = (...args) => {
@@ -29,71 +24,20 @@
           } else cb();
         }
 
-        function showMonetagInter() {
-          // In-App Interstitial
-
-          show_9829119({
-            type: "inApp",
-            inAppSettings: {
-              frequency: 2,
-              capping: 0.1,
-              interval: 30,
-              timeout: 5,
-              everyPage: false,
-            },
-          });
-
-          /*
-          This value is decoded as follows:
-          - show automatically 2 ads
-            within 0.1 hours (6 minutes)
-            with a 30-second interval between them
-            and a 5-second delay before the first one is shown.
-            The last digit, 0, means that the session will be saved when you navigate between pages.
-            If you set the last digit as 1, then at any transition between pages,
-            the session will be reset, and the ads will start again.
-          */
-        }
-
-        function showMonetagReward() {
-          // Rewarded interstitial
-
-          show_9829119().then(() => {
-            // You need to add your user reward function here, which will be executed after the user watches the ad.
-            // For more details, please refer to the detailed instructions.
-            alert("You have seen an ad!");
-          });
-        }
-
-        function ShowMonetagRewardPop() {
-
-          // Rewarded Popup
-
-          show_9829119('pop').then(() => {
-              // user watch ad till the end or close it in interstitial format
-              // your code to reward user for rewarded format
-          }).catch(e => {
-              // user get error during playing ad
-              // do nothing or whatever you want
-          })
-
-
-        }
-
-        function normalize(s) {
-          return (s || "").toString().trim().toLowerCase();
-        }
-        
         function showAd() {
           AdController.show().then((result) => {
               // ✅ Ad watched fully
               // alert("You earned 50 coins!");
               // Here you can update user balance
             })
-            .catch((result) => {
+            .catch((err) => {
               // ❌ Ad failed or closed early
               console.error("Ad error:", err);
             });
+        }
+
+        function normalize(s) {
+          return (s || "").toString().trim().toLowerCase();
         }
 
         function escapeHtml(str) {
@@ -138,7 +82,7 @@
           if (enterBtn) {
             enterBtn.addEventListener("click", () => {
               splash?.classList.add("hide");
-              homeView?.classList.remove("hidden");
+              showView(homeView);
               window.scrollTo({ top: 0, behavior: "instant" });
             });
           }
@@ -162,8 +106,8 @@
 
             // If All -> show home and hide group-view
             if (groupNorm === "all") {
-              groupView?.classList.add("hidden");
-              homeView?.classList.remove("hidden");
+              hideView(groupView);
+              showView(homeView);
               // optional: reset scroll
               window.scrollTo({ top: 0, behavior: "smooth" });
               return;
@@ -179,8 +123,8 @@
 
             if (!grid) {
               list.innerHTML = `<div class="empty">No games available</div>`;
-              homeView?.classList.add("hidden");
-              groupView?.classList.remove("hidden");
+              hideView(homeView);
+              showView(groupView);
               return;
             }
 
@@ -236,8 +180,8 @@
             }
 
             // Switch views
-            homeView?.classList.add("hidden");
-            groupView?.classList.remove("hidden");
+            hideView(homeView);
+            showView(groupView);
             window.scrollTo({ top: 0, behavior: "smooth" });
           });
 
@@ -254,48 +198,28 @@
             });
           }
 
-          // Carousel auto-slide & indicators
-          const carousel = document.querySelector(".carousel");
-          const indicators = document.querySelector(".carousel-indicators");
-          if (carousel && indicators) {
-            const slides = carousel.querySelectorAll(".feature-card");
-            slides.forEach((s, i) => {
-              const dot = document.createElement("span");
-              dot.className = "dot" + (i === 0 ? " active" : "");
-              dot.addEventListener("click", () => {
-                carousel.scrollTo({ left: s.offsetLeft, behavior: "smooth" });
-              });
-              indicators.appendChild(dot);
-            });
-            let idx = 0;
-            setInterval(() => {
-              idx = (idx + 1) % slides.length;
-              indicators
-                .querySelectorAll(".dot")
-                .forEach((d, i) => d.classList.toggle("active", i === idx));
-              carousel.scrollTo({
-                left: slides[idx].offsetLeft,
-                behavior: "smooth",
-              });
-            }, 5000);
-          }
+          
+// Clear search button
+const clearBtn = document.getElementById("clear-search");
+if (clearBtn && searchInput) {
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    searchInput.dispatchEvent(new Event("input"));
+  });
+}
 
-          // Sort dropdown
-          const sortSelect = document.getElementById("sort-select");
-          if (sortSelect && grid) {
-            sortSelect.addEventListener("change", () => {
-              let cards = Array.from(grid.querySelectorAll(".game-card"));
-              if (sortSelect.value === "az") {
-                cards.sort((a, b) =>
-                  (a.dataset.title || "").localeCompare(b.dataset.title || "")
-                );
-              } else if (sortSelect.value === "newest") {
-                cards = cards.reverse(); // simplistic newest = last ones
-              }
-              grid.innerHTML = "";
-              cards.forEach((c) => grid.appendChild(c));
-            });
-          }
+// Helper for view switching animations
+function showView(el) {
+  if (!el) return;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("active"), 10);
+}
+
+function hideView(el) {
+  if (!el) return;
+  el.classList.remove("active");
+  setTimeout(() => el.classList.add("hidden"), 400);
+}
 
           // Optional: small sanity checks (only when DEBUG)
           if (DEBUG) {
@@ -313,15 +237,15 @@
     </script>
   </head>
   <body>
-<!--     <section id="splash" class="splash">
+    <section id="splash" class="splash">
       <div class="splash-overlay"></div>
       <div class="splash-inner">
         <h1 class="app-title">TMA Games</h1>
         <button id="enter-btn" class="btn primary">Enter</button>
       </div>
-    </section> -->
+    </section>
 
-    <main id="home-view" class="home hidden">
+    <main id="home-view" class="home view hidden">
       <header class="topbar">
         <div class="row user-coins">
           <button class="icon-btn avatar">
@@ -332,11 +256,10 @@
           </button>
           <div class="coins"><span>🪙</span>0</div>
         </div>
-        <button onclick="showAd()">🎥 Watch Ad 1</button>
-        <button onclick="showAd()">🎥 Watch Ad for Coins</button>
         <div class="row search-row">
           <div class="search-wrap">
             <input id="search-input" placeholder="Search games..." />
+  <button id="clear-search" class="icon-btn">×</button>
           </div>
         </div>
         <div class="row groups-row">
@@ -371,11 +294,8 @@
                 loading="lazy"
               />
             </div>
-
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
-              <div class="title">2048 2048</div>
+              <div class="title">2048</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
@@ -395,10 +315,8 @@
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
-              <div class="title">3dtetris 3dtetris</div>
+              <div class="title">3D Tetris</div>
               <div class="subtitle">Puzzle</div>
             </div>
           </a>
@@ -418,15 +336,12 @@ alienattack cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
-              <div class="title">alienattack alienattack</div>
+              <div class="title">Alien Attack</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
         </div>
-        <div class="carousel-indicators"></div>
         <h2>Trending</h2>
         <div class="trending-strip">
           <a
@@ -445,9 +360,7 @@ balanceball cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">balanceball balanceball</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -468,9 +381,7 @@ battleday cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">battleday battleday</div>
               <div class="subtitle">Action</div>
             </div>
@@ -491,9 +402,7 @@ bdot cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bdot bdot</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -514,9 +423,7 @@ birgly cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">birgly birgly</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -537,9 +444,7 @@ blackbats cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">blackbats blackbats</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -560,9 +465,7 @@ bloxslider cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bloxslider bloxslider</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -583,9 +486,7 @@ bottomtight cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bottomtight bottomtight</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -606,9 +507,7 @@ bravebird cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bravebird bravebird</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -629,9 +528,7 @@ brokenhorn cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">brokenhorn brokenhorn</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -652,9 +549,7 @@ bubblecn cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bubblecn bubblecn</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -675,9 +570,7 @@ bubblefish cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bubblefish bubblefish</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -698,23 +591,13 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">burningrubber burningrubber</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
         </div>
         <h2>All Games</h2>
-        <div class="sort-wrap">
-          <label>Sort:</label>
-          <select id="sort-select">
-            <option value="newest">Newest</option>
-            <option value="az">A–Z</option>
-            <option value="played">Most Played</option>
-          </select>
-        </div>
         <div id="game-grid" class="grid">
           <a
             class="game-card"
@@ -732,10 +615,8 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
-              <div class="title">2048 2048</div>
+              <div class="title">2048</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
@@ -755,10 +636,8 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
-              <div class="title">3dtetris 3dtetris</div>
+              <div class="title">3D Tetris</div>
               <div class="subtitle">Puzzle</div>
             </div>
           </a>
@@ -778,10 +657,8 @@ alienattack cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
-              <div class="title">alienattack alienattack</div>
+              <div class="title">Alien Attack</div>
               <div class="subtitle">Extras</div>
             </div>
           </a>
@@ -801,9 +678,7 @@ balanceball cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">balanceball balanceball</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -824,9 +699,7 @@ battleday cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">battleday battleday</div>
               <div class="subtitle">Action</div>
             </div>
@@ -847,9 +720,7 @@ bdot cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bdot bdot</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -870,9 +741,7 @@ birgly cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">birgly birgly</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -893,9 +762,7 @@ blackbats cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">blackbats blackbats</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -916,9 +783,7 @@ bloxslider cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bloxslider bloxslider</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -939,9 +804,7 @@ bottomtight cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bottomtight bottomtight</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -962,9 +825,7 @@ bravebird cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bravebird bravebird</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -985,9 +846,7 @@ brokenhorn cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">brokenhorn brokenhorn</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1008,9 +867,7 @@ bubblecn cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bubblecn bubblecn</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1031,9 +888,7 @@ bubblefish cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">bubblefish bubblefish</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1054,9 +909,7 @@ burningrubber cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">burningrubber burningrubber</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1077,9 +930,7 @@ candyfusion cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">candyfusion candyfusion</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1100,9 +951,7 @@ candypig cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">candypig candypig</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1123,9 +972,7 @@ captainroger cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">captainroger captainroger</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1146,9 +993,7 @@ captainwar cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">captainwar captainwar</div>
               <div class="subtitle">Action</div>
             </div>
@@ -1169,9 +1014,7 @@ catonfire cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">catonfire catonfire</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1192,9 +1035,7 @@ cavejumper cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cavejumper cavejumper</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -1215,9 +1056,7 @@ cboxes cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cboxes cboxes</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1238,9 +1077,7 @@ cheeselab cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cheeselab cheeselab</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1261,9 +1098,7 @@ chipman cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">chipman chipman</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1284,9 +1119,7 @@ christmasballs cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">christmasballs christmasballs</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1307,9 +1140,7 @@ circleball cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">circleball circleball</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1330,9 +1161,7 @@ circlepong cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">circlepong circlepong</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1353,9 +1182,7 @@ circletris cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">circletris circletris</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1376,9 +1203,7 @@ cninjas cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cninjas cninjas</div>
               <div class="subtitle">Action</div>
             </div>
@@ -1399,9 +1224,7 @@ cowboyrun cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cowboyrun cowboyrun</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -1422,9 +1245,7 @@ cowboyshot cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cowboyshot cowboyshot</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1445,9 +1266,7 @@ craigenstone cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">craigenstone craigenstone</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1468,9 +1287,7 @@ creedyrabbit cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">creedyrabbit creedyrabbit</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1491,9 +1308,7 @@ crkarmax cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">crkarmax crkarmax</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1514,9 +1329,7 @@ cubeninja cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">cubeninja cubeninja</div>
               <div class="subtitle">Action</div>
             </div>
@@ -1537,9 +1350,7 @@ dangermouse cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">dangermouse dangermouse</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1560,9 +1371,7 @@ dangerous cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">dangerous dangerous</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1583,9 +1392,7 @@ darkninja cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">darkninja darkninja</div>
               <div class="subtitle">Action</div>
             </div>
@@ -1606,9 +1413,7 @@ deathsoul cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">deathsoul deathsoul</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1629,9 +1434,7 @@ donteattrash cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">donteattrash donteattrash</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1652,9 +1455,7 @@ dotgame cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">dotgame dotgame</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1675,9 +1476,7 @@ dronewars cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">dronewars dronewars</div>
               <div class="subtitle">Action</div>
             </div>
@@ -1698,9 +1497,7 @@ dropcircle cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">dropcircle dropcircle</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1721,9 +1518,7 @@ duckwater cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">duckwater duckwater</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1744,9 +1539,7 @@ elmore cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">elmore elmore</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1767,9 +1560,7 @@ escape cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">escape escape</div>
               <div class="subtitle">Adventure</div>
             </div>
@@ -1790,9 +1581,7 @@ evilrobot cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">evilrobot evilrobot</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1813,9 +1602,7 @@ evilwyrm cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">evilwyrm evilwyrm</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1836,9 +1623,7 @@ fastgame cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">fastgame fastgame</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1859,9 +1644,7 @@ firebrigade cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">firebrigade firebrigade</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1882,9 +1665,7 @@ fishingfrenzy cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">fishingfrenzy fishingfrenzy</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1905,9 +1686,7 @@ fishshot cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">fishshot fishshot</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1928,9 +1707,7 @@ flapcatcopters cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">flapcatcopters flapcatcopters</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1951,9 +1728,7 @@ flapcatxmas cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">flapcatxmas flapcatxmas</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -1974,9 +1749,7 @@ flappydog cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">flappydog flappydog</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -1997,9 +1770,7 @@ flyingschool cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">flyingschool flyingschool</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2020,9 +1791,7 @@ foofoo cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">foofoo foofoo</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2043,9 +1812,7 @@ foxfury cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">foxfury foxfury</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2066,9 +1833,7 @@ freedomroad cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">freedomroad freedomroad</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2089,9 +1854,7 @@ frog cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">frog frog</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2112,9 +1875,7 @@ fullimmersion cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">fullimmersion fullimmersion</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2135,9 +1896,7 @@ funnysoccer cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">funnysoccer funnysoccer</div>
               <div class="subtitle">Sports</div>
             </div>
@@ -2158,9 +1917,7 @@ gettwelve cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">gettwelve gettwelve</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2181,9 +1938,7 @@ goblinmachine cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">goblinmachine goblinmachine</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2204,9 +1959,7 @@ gofishing cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">gofishing gofishing</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2227,9 +1980,7 @@ goingnuts cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">goingnuts goingnuts</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2250,9 +2001,7 @@ greedygnomes cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">greedygnomes greedygnomes</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2273,9 +2022,7 @@ greenwings cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">greenwings greenwings</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2296,9 +2043,7 @@ groovyski cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">groovyski groovyski</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2319,9 +2064,7 @@ grubhub cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">grubhub grubhub</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2342,9 +2085,7 @@ gumballrace cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">gumballrace gumballrace</div>
               <div class="subtitle">Racing</div>
             </div>
@@ -2365,9 +2106,7 @@ gunmach cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">gunmach gunmach</div>
               <div class="subtitle">Action</div>
             </div>
@@ -2388,9 +2127,7 @@ hanselandgretel cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">hanselandgretel hanselandgretel</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2411,9 +2148,7 @@ herojump cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">herojump herojump</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2434,9 +2169,7 @@ hidden cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">hidden hidden</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2457,9 +2190,7 @@ hungrybob cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">hungrybob hungrybob</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2480,9 +2211,7 @@ hyperminer cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">hyperminer hyperminer</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2503,9 +2232,7 @@ icecream cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">icecream icecream</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2526,9 +2253,7 @@ isagame cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">isagame isagame</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2549,9 +2274,7 @@ jellydoods cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jellydoods jellydoods</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2572,9 +2295,7 @@ jellyslice cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jellyslice jellyslice</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2595,9 +2316,7 @@ jomjom cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jomjom jomjom</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2618,9 +2337,7 @@ jump2048 cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jump2048 jump2048</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2641,9 +2358,7 @@ jumpkitty cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jumpkitty jumpkitty</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2664,9 +2379,7 @@ jumpman cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jumpman jumpman</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2687,9 +2400,7 @@ jumppydog cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jumppydog jumppydog</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2710,9 +2421,7 @@ jumppydragon cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">jumppydragon jumppydragon</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2733,9 +2442,7 @@ knightnday cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">knightnday knightnday</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2756,9 +2463,7 @@ lizardrocket cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">lizardrocket lizardrocket</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2779,9 +2484,7 @@ looneyroonks cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">looneyroonks looneyroonks</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2802,9 +2505,7 @@ luxahoy cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">luxahoy luxahoy</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2825,9 +2526,7 @@ manic cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">manic manic</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2848,9 +2547,7 @@ matchtime cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">matchtime matchtime</div>
               <div class="subtitle">Puzzle</div>
             </div>
@@ -2871,9 +2568,7 @@ mathgame cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">mathgame mathgame</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2894,9 +2589,7 @@ mixthesquare cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">mixthesquare mixthesquare</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2917,9 +2610,7 @@ monstercandy cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">monstercandy monstercandy</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2940,9 +2631,7 @@ monstereater cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">monstereater monstereater</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -2963,9 +2652,7 @@ mousejump cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">mousejump mousejump</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -2986,9 +2673,7 @@ mypuki cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">mypuki mypuki</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3009,9 +2694,7 @@ nest cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">nest nest</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3032,9 +2715,7 @@ ninjablade cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ninjablade ninjablade</div>
               <div class="subtitle">Action</div>
             </div>
@@ -3055,9 +2736,7 @@ ninjablock cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ninjablock ninjablock</div>
               <div class="subtitle">Puzzle</div>
             </div>
@@ -3078,9 +2757,7 @@ ninjakidvszb cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ninjakidvszb ninjakidvszb</div>
               <div class="subtitle">Action</div>
             </div>
@@ -3101,9 +2778,7 @@ ninjarun cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ninjarun ninjarun</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3124,9 +2799,7 @@ ninjaway cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ninjaway ninjaway</div>
               <div class="subtitle">Action</div>
             </div>
@@ -3147,9 +2820,7 @@ nugget_seeker cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">nugget_seeker nugget_seeker</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3170,9 +2841,7 @@ ojelloonline cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ojelloonline ojelloonline</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3193,9 +2862,7 @@ pacman cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pacman pacman</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3216,9 +2883,7 @@ pancakeboss cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pancakeboss pancakeboss</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3239,9 +2904,7 @@ pandaflash cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pandaflash pandaflash</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3262,9 +2925,7 @@ pebbleboy cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pebbleboy pebbleboy</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3285,9 +2946,7 @@ penguin cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">penguin penguin</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3308,9 +2967,7 @@ periperi cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">periperi periperi</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3331,9 +2988,7 @@ pieattack cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pieattack pieattack</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3354,9 +3009,7 @@ pigeon cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pigeon pigeon</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3377,9 +3030,7 @@ piggyroll cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">piggyroll piggyroll</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3400,9 +3051,7 @@ piratekid cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">piratekid piratekid</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3423,9 +3072,7 @@ pitana cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pitana pitana</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3446,9 +3093,7 @@ popup cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">popup popup</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3469,9 +3114,7 @@ portalrunner cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">portalrunner portalrunner</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3492,9 +3135,7 @@ pyramidjump cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">pyramidjump pyramidjump</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3515,9 +3156,7 @@ raccoonrun cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">raccoonrun raccoonrun</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3538,9 +3177,7 @@ rainbox cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">rainbox rainbox</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3561,9 +3198,7 @@ rapunzel cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">rapunzel rapunzel</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3584,9 +3219,7 @@ rectangzings cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">rectangzings rectangzings</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3607,9 +3240,7 @@ reflector cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">reflector reflector</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3630,9 +3261,7 @@ robotion cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">robotion robotion</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3653,9 +3282,7 @@ rocketpop cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">rocketpop rocketpop</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3676,9 +3303,7 @@ ropeninja cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">ropeninja ropeninja</div>
               <div class="subtitle">Action</div>
             </div>
@@ -3699,9 +3324,7 @@ runneryodas cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">runneryodas runneryodas</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3722,9 +3345,7 @@ runpixierun cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">runpixierun runpixierun</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -3745,9 +3366,7 @@ sallybbq cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">sallybbq sallybbq</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3768,9 +3387,7 @@ sambogart cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">sambogart sambogart</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3791,9 +3408,7 @@ silverarrow cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">silverarrow silverarrow</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3814,9 +3429,7 @@ skylands cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">skylands skylands</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3837,9 +3450,7 @@ skyrace cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">skyrace skyrace</div>
               <div class="subtitle">Racing</div>
             </div>
@@ -3860,9 +3471,7 @@ skytte cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">skytte skytte</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3883,9 +3492,7 @@ skywire cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">skywire skywire</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3906,9 +3513,7 @@ slotchicken cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">slotchicken slotchicken</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3929,9 +3534,7 @@ sortbird cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">sortbird sortbird</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3952,9 +3555,7 @@ spacecowboy cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">spacecowboy spacecowboy</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3975,9 +3576,7 @@ spicy cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">spicy spicy</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -3998,9 +3597,7 @@ springninja cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">springninja springninja</div>
               <div class="subtitle">Action</div>
             </div>
@@ -4021,9 +3618,7 @@ squarecrush cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">squarecrush squarecrush</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4044,9 +3639,7 @@ stevenkash cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">stevenkash stevenkash</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4067,9 +3660,7 @@ stickpanda cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">stickpanda stickpanda</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4090,9 +3681,7 @@ stickpandaxmas cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">stickpandaxmas stickpandaxmas</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4113,9 +3702,7 @@ sticksamurai cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">sticksamurai sticksamurai</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4136,9 +3723,7 @@ stickygoo cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">stickygoo stickygoo</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4159,9 +3744,7 @@ strangespace cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">strangespace strangespace</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4182,9 +3765,7 @@ taptapsubmarine cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">taptapsubmarine taptapsubmarine</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4205,9 +3786,7 @@ targetap cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">targetap targetap</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4228,9 +3807,7 @@ tetrisclassic cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">tetrisclassic tetrisclassic</div>
               <div class="subtitle">Puzzle</div>
             </div>
@@ -4251,9 +3828,7 @@ titanrunner cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">titanrunner titanrunner</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -4274,9 +3849,7 @@ tooncup cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">tooncup tooncup</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4297,9 +3870,7 @@ trailblazer cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">trailblazer trailblazer</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4320,9 +3891,7 @@ trashndash cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">trashndash trashndash</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4343,9 +3912,7 @@ trollboxing cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">trollboxing trollboxing</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4366,9 +3933,7 @@ uforun cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">uforun uforun</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -4389,9 +3954,7 @@ veggirabbit cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">veggirabbit veggirabbit</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4412,9 +3975,7 @@ viking cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">viking viking</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4435,9 +3996,7 @@ woodblock cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">woodblock woodblock</div>
               <div class="subtitle">Puzzle</div>
             </div>
@@ -4458,9 +4017,7 @@ xtypesky cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">xtypesky xtypesky</div>
               <div class="subtitle">Sports</div>
             </div>
@@ -4481,9 +4038,7 @@ zapaliens cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zapaliens zapaliens</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4504,9 +4059,7 @@ zcj2 cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zcj2 zcj2</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4527,9 +4080,7 @@ zombie-dungeon cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zombie-dungeon zombie-dungeon</div>
               <div class="subtitle">Adventure</div>
             </div>
@@ -4550,9 +4101,7 @@ zombieinfect cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zombieinfect zombieinfect</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4573,9 +4122,7 @@ zombienight cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zombienight zombienight</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4596,9 +4143,7 @@ zombiescantjump cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zombiescantjump zombiescantjump</div>
               <div class="subtitle">Arcade</div>
             </div>
@@ -4619,9 +4164,7 @@ zombieworld cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zombieworld zombieworld</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4642,9 +4185,7 @@ zoostuner cover"
                 loading="lazy"
               />
             </div>
-            <div class="play-overlay">▶ Play</div>
             <div class="meta">
-              <div class="badge">🔥 Hot</div>
               <div class="title">zoostuner zoostuner</div>
               <div class="subtitle">Extras</div>
             </div>
@@ -4680,24 +4221,24 @@ zoostuner cover"
         <div id="group-list" class="group-list"></div>
       </section>
     </main>
-
-    <nav class="tabbar">
-      <button class="tab-btn active">
-        <span>🏠</span>
-        <span>Home</span>
-      </button>
-      <button class="tab-btn">
-        <span>🎮</span>
-        <span>My Games</span>
-      </button>
-      <button class="tab-btn">
-        <span>🏆</span>
-        <span>Leaderboard</span>
-      </button>
-      <button class="tab-btn">
-        <span>👤</span>
-        <span>Profile</span>
-      </button>
-    </nav>
-  </body>
+  
+<nav class="tabbar">
+  <button class="tab-btn active">
+    <span>🏠</span>
+    <span>Home</span>
+  </button>
+  <button class="tab-btn">
+    <span>🎮</span>
+    <span>My Games</span>
+  </button>
+  <button class="tab-btn">
+    <span>🏆</span>
+    <span>Leaderboard</span>
+  </button>
+  <button class="tab-btn">
+    <span>👤</span>
+    <span>Profile</span>
+  </button>
+</nav>
+</body>
 </html>
