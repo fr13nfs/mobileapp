@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TMA Games</title>
     <script async src="https://partner.adextra.io/jt/8fbc9e29c7dbba26d6ea53a7f043ed110ed79c22.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <script>
+      const AdController = window.Adsgram.init({ blockId: "int-14619" });
       (function () {
         const DEBUG = false; // set true to see console logs during testing
         const log = (...args) => {
@@ -27,6 +29,26 @@
           return (s || "").toString().trim().toLowerCase();
         }
 
+        function showAd() {
+          try {
+              // code to show banner
+            await window.Adsgram.init({ blockId: "int-14619" }).show();
+          } catch (error) {
+              // user get error during playing ad or no banner to show
+              // do nothing or whatever you want
+          }
+        }
+
+        function DisplayAd() {
+            AdController.show().then((result) => {
+              // user watch ad till the end or close it in interstitial format
+              // your code to reward user for rewarded format
+          }).catch((result) => {
+              // user get error during playing ad
+              // do nothing or whatever you want
+          })
+        }
+        
         function escapeHtml(str) {
           if (!str) return "";
           return String(str)
@@ -451,6 +473,8 @@
           </button>
           <div class="coins"><span>🪙</span>0</div>
         </div>
+        <button onclick="DisplayAd()">Show Ad1</button>
+        <button onclick="showAd()">Show Ad2</button>
         <div class="row search-row">
           <div class="search-wrap">
             <input id="search-input" placeholder="Search games..." />
