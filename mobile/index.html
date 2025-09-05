@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TMA Games</title>
+    <script
+      src="//libtl.com/sdk.js"
+      data-zone="9829119"
+      data-sdk="show_9829119"
+    ></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link
@@ -22,6 +27,57 @@
           if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", cb);
           } else cb();
+        }
+
+        function showMonetagInter() {
+          // In-App Interstitial
+
+          show_9829119({
+            type: "inApp",
+            inAppSettings: {
+              frequency: 2,
+              capping: 0.1,
+              interval: 30,
+              timeout: 5,
+              everyPage: false,
+            },
+          });
+
+          /*
+          This value is decoded as follows:
+          - show automatically 2 ads
+            within 0.1 hours (6 minutes)
+            with a 30-second interval between them
+            and a 5-second delay before the first one is shown.
+            The last digit, 0, means that the session will be saved when you navigate between pages.
+            If you set the last digit as 1, then at any transition between pages,
+            the session will be reset, and the ads will start again.
+          */
+        }
+
+        function showMonetagReward() {
+          // Rewarded interstitial
+
+          show_9829119().then(() => {
+            // You need to add your user reward function here, which will be executed after the user watches the ad.
+            // For more details, please refer to the detailed instructions.
+            alert("You have seen an ad!");
+          });
+        }
+
+        function ShowMonetagRewardPop() {
+
+          // Rewarded Popup
+
+          show_9829119('pop').then(() => {
+              // user watch ad till the end or close it in interstitial format
+              // your code to reward user for rewarded format
+          }).catch(e => {
+              // user get error during playing ad
+              // do nothing or whatever you want
+          })
+
+
         }
 
         function normalize(s) {
@@ -277,9 +333,10 @@
           <div class="coins"><span>🪙</span>0</div>
         </div>
         <div class="row search-row">
+          <button onclick="showMonetagInter()">🎥 Watch Ad for Coins</button>
+          <button onclick="showAd()">🎥 Watch Ad for Coins</button>
           <div class="search-wrap">
             <input id="search-input" placeholder="Search games..." />
-            <button onclick="showAd()">🎥 Watch Ad for Coins</button>
           </div>
         </div>
         <div class="row groups-row">
@@ -314,7 +371,7 @@
                 loading="lazy"
               />
             </div>
-            
+
             <div class="play-overlay">▶ Play</div>
             <div class="meta">
               <div class="badge">🔥 Hot</div>
